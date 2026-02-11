@@ -5,3 +5,5 @@ Group members:
 Bekir
 Wilma
 Marie
+
+We are working on a Python project.
