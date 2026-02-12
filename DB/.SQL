@@ -18,11 +18,11 @@ CREATE TABLE IF NOT EXISTS public.messages
     unl_rad integer NOT NULL DEFAULT 30,
     geom geometry(Point,4326) NOT NULL,
     crt_time integer,
-    uni text COLLATE pg_catalog."default",
+    uni integer COLLATE pg_catalog."default",
     view_once boolean,
     status boolean,
     m_txt text COLLATE pg_catalog."default",
-    q_multi boolean,
+    q_multi integer,
     CONSTRAINT messages_pkey PRIMARY KEY (m_id)
 );
 
@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS public."possAnsw"
 CREATE TABLE IF NOT EXISTS public.question
 (
     q_id integer NOT NULL,
-    q_txt text COLLATE pg_catalog."default"
+    q_txt text COLLATE pg_catalog."default",
+    uni_id integer NOT NULL DEFAULT nextval('"universe_universalID_seq"'::regclass)
 );
 
 CREATE TABLE IF NOT EXISTS public.universe
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.user_answ_que
 CREATE TABLE IF NOT EXISTS public.users
 (
     us_id integer NOT NULL,
-    us_name integer NOT NULL DEFAULT nextval('users_user_name_seq'::regclass),
+    us_name text NOT NULL DEFAULT nextval('users_user_name_seq'::regclass),
     pwd text COLLATE pg_catalog."default" NOT NULL,
     CONSTRAINT users_pkey PRIMARY KEY (us_id)
 );
@@ -158,3 +159,47 @@ ALTER TABLE IF EXISTS public.users_messages
     NOT VALID;
 
 END;
+
+BEGIN;
+
+-- Create example Users Data
+
+INSERT INTO public.users (us_id, us_name, pwd) VALUES
+(1001, marietranova, 'pw_marie'),
+(1002, bekirbeko, 'pw_beko'),
+(1003, wilmadora, 'pw_wilma'),
+(1004, jacobvanmeer, 'pw_jacob'),
+(5, lindaelfriede, 'pw_linda');
+
+
+-- Create example Universe Data
+
+INSERT INTO public.universe (uni_id, uni_name, pub_priv, descri) VALUES
+(2001,'LisboaFunfacts',true,'Funfacts about the city of Lisbon.'),
+(2002,'GeoTech252627',false,'Universe for all GeoTech students.'),
+(2003,'RestaurantReviewsLisbon',true,'Users reviews of restaurants in Lisbon.'),
+(2004,'SunsetViewpoints',true,'Best viewpoints to watch the sunset in Lisbon.'),
+(2005,'Erasmus2026summer',false,'Erasmus student network for the summer semester of 2026.'),
+(2006,'Swifties',true,'Universe for all Taylor Swift fans worldwide.'),
+(2007,'LisbonRepair',true,'Real-time sharing of information about locations in Lisbon that need construction or maintenance work.'),
+(2008,'LostAndFound',true,'Universe for sharing information about lost and found items in Lisbon.'),
+(2009,'LisbonEvents',true,'Universe for sharing information about events happening in Lisbon.'); 
+
+-- Create example Users_Universes Data
+
+INSERT INTO public.users_universe (users_us_id, universe_uni_id) VALUES
+(1001,2001),(1001,2002), (1001,2007), (1001,2009),
+(1002,2002),(1002,2005), (1002,2006), (1002,2009),
+(1003,2002),(1003,2004), (1003,2008), (1003,2009),
+(1004,2004),(1004,2005), (1004,2009),
+(1005,2002),(1005,2003), (1005,2007), (1005,2009); 
+
+-- Create example question Data
+
+INSERT INTO public.question (q_id, q_txt, uni_id) VALUES
+(1001,'What is the best viewpoint to watch the sunset in Lisbon?', 2004),
+(1002,'What is your favorite fun fact about Lisbon?', 2001),
+(1003,'Which restaurant in Lisbon would you recommend?', 2003),
+(1004,'What is your favorite Taylor Swift song?', 2006),
+(1005,'Which event in Lisbon are you most looking forward to?', 2009);
+
