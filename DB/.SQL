@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public."possAnsw"
     aswr_id integer NOT NULL,
     aswr_txt text COLLATE pg_catalog."default" NOT NULL,
     tf boolean NOT NULL,
-    CONSTRAINT "possAnsw_pkey" PRIMARY KEY (q_id)
+    CONSTRAINT "possAnsw_pkey" PRIMARY KEY (q_id, answr_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.question
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.user_answ_que
 CREATE TABLE IF NOT EXISTS public.users
 (
     us_id integer NOT NULL,
-    us_name text NOT NULL DEFAULT nextval('users_user_name_seq'::regclass),
+    us_name text NOT NULL UNIQUE,
     pwd text COLLATE pg_catalog."default" NOT NULL,
     CONSTRAINT users_pkey PRIMARY KEY (us_id)
 );
@@ -165,11 +165,11 @@ BEGIN;
 -- Create example Users Data
 
 INSERT INTO public.users (us_id, us_name, pwd) VALUES
-(1001, marietranova, 'pw_marie'),
-(1002, bekirbeko, 'pw_beko'),
-(1003, wilmadora, 'pw_wilma'),
-(1004, jacobvanmeer, 'pw_jacob'),
-(5, lindaelfriede, 'pw_linda');
+(1001, 'marietranova', 'pw_marie'),
+(1002, 'bekirbeko', 'pw_beko'),
+(1003, 'wilmadora', 'pw_wilma'),
+(1004, 'jacobvanmeer', 'pw_jacob'),
+(1005, 'lindaelfriede', 'pw_linda');
 
 
 -- Create example Universe Data
@@ -197,9 +197,52 @@ INSERT INTO public.users_universe (users_us_id, universe_uni_id) VALUES
 -- Create example question Data
 
 INSERT INTO public.question (q_id, q_txt, uni_id) VALUES
-(1001,'What is the best viewpoint to watch the sunset in Lisbon?', 2004),
-(1002,'What is your favorite fun fact about Lisbon?', 2001),
-(1003,'Which restaurant in Lisbon would you recommend?', 2003),
-(1004,'What is your favorite Taylor Swift song?', 2006),
-(1005,'Which event in Lisbon are you most looking forward to?', 2009);
+(3001,'Would you recommend this viewpoint?', 2004),
+(3002,'Why does the Convento do Carmo no longer have a roof today?', 2001),
+(3003,'Hey GeoTechs, this saturday I want to celebrate my birthday with you!! Meet me here in this parc around 8:30 PM. I will provide some snacks and drinks and hope we will have a great time together! See you there xx', 2002),
+(3004,'Unfortunately the elevator is broken o my friend with a wheelchair could not pass. Please make sure to repair it as soon as possible. Thank you!', 2007),
+(3005,'I found some sunglasses on a park bench here. They are brown with a leopard pattern. Email me here when you think they might be yours: wilma.foundyourglasses@web.de', 2008),
+(3006,'Rooftop Party here this weekend! Rua Leonardo 14, 3rd floor, 5€ at the entrance including a welcome drink.', 2009),
+(3007,'Congratulations Swiftie!! You are the first person to get the special message I left in this Hotel for you. Your individual discount code for my next tour is "swiftielisboa224519". You will get a 20 percent discount on your next concert tickets and a personal meet-and-greet after the show. See you then!! xxTaylor', 2006);    
+
+-- Create example possAnsw Data 
+
+
+INSERT INTO public."possAnsw" (q_id, aswr_id, aswr_txt, tf) VALUES
+
+--Question 3001 possible answers
+(3001,4001,'Yes',true),
+(3001,4002, 'No',false),
+
+--Question 3002 possible answers
+(3002,4003,'Because of the earthquake in 1755',true),
+(3002,4004,'Because of a fire in 1900',false),
+(3002,4005,'Because of a flood in 1800',false),
+
+--Question 3003 possible answers
+(3003,4006,'I will be there!!',true),
+(3003,4007,'Sorry, I can not make it this time.',false),
+
+--Question 3004 possible answers
+(3004,4008,'I have received your report and will report it to the city council immediately!',true),
+
+--Question 3005 possible answers
+--do we need an answer here?
+
+--Question 3006 possible answers
+(3006,4009,'I will be there!!',true),
+(3006,4010,'Sorry, I can not make it this time.',false);
+
+--Question 3007 possible answers
+-- no answer needed for this question, it is more of an announcement than a question, but we could add a "Thank you for the discount code, I will use it for my next concert tickets!" answer option if we want to be consistent with the other questions.
+
+--Create example messages_users Data
+
+INSERT INTO public.users_messages (users_us_id, messages_m_id) VALUES
+(1001,5001),(1001,5002),(1001,5003),
+(1002,5004),(1002,5005),(1002,5006),
+(1003,5007),(1003,5008),(1003,5009),
+(1004,5010),(1004,5011),(1004,5012),
+(1005,5013),(1005,5014),(1005,5015);
+
 
