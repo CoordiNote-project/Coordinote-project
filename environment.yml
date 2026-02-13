@@ -1,0 +1,4 @@
+name: CoordiNote
+channels:
+  - conda-forge
+prefix: C:\Users\marie\miniforge3\envs\CoordiNote
