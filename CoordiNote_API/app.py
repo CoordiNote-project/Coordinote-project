@@ -10,7 +10,7 @@ from passlib.hash import bcrypt # This is a library for hashing passwords secure
 # from utils import format_geojson
 import uuid # for generating unique identifiers, we will use it to generate unique IDs for users and notes
 from datetime import datetime, timedelta # for working with dates and times, we will use it to set expiration times for authentication tokens
-
+from utils import format_geojson
 
 # Database configuration
 
@@ -36,15 +36,13 @@ db_pool = SimpleConnectionPool(
     cursor_factory=RealDictCursor
 )
 
-# ---------------------------------
+
 # Create Flask app
-# ---------------------------------
 
 app = Flask(__name__)
 
-# ---------------------------------
+
 # Helper functions
-# ---------------------------------
 
 def get_db_connection():
     return db_pool.getconn()
@@ -52,17 +50,15 @@ def get_db_connection():
 def release_db_connection(conn):
     db_pool.putconn(conn)
 
-# ---------------------------------
+
 # Test route
-# ---------------------------------
 
 @app.route("/")
 def home():
     return jsonify({"message": "Coordinote API is running"})
 
-# ---------------------------------
+
 # Run server
-# ---------------------------------
 
 if __name__ == "__main__":
     app.run(debug=True)
