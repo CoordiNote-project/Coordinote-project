@@ -15,8 +15,7 @@ from utils import format_geojson
 # Database configuration
 
 DB_CONFIG = {
-    "database": "CoordiNote_API", # The name of the database we will connect to --> CHANGE IT!!!
-    "database": "coordinotedb", # The name of the database we will connect to --> CHANGE IT!!!
+    "database": "coordinotedb", # The name of the database we will connect to (specific for me, Marie - we need to update this)
     "user": "postgres",
     "password": "postgres",
     "host": "localhost",
@@ -56,7 +55,7 @@ def release_db_connection(conn):
 
 @app.route("/")
 def home():
-    return jsonify({"message": "Coordinote API is running"})
+    return jsonify({"message": "Coordinote API is running!"})
 
 
 # Run server
