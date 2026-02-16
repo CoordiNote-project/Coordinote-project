@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS public.user_answ_que
 CREATE TABLE IF NOT EXISTS public.users
 (
     us_id integer NOT NULL,
-    us_name text NOT NULL DEFAULT nextval('users_user_name_seq'::regclass),
+    us_name text NOT NULL UNIQUE,
     pwd text COLLATE pg_catalog."default" NOT NULL,
     CONSTRAINT users_pkey PRIMARY KEY (us_id)
 );
