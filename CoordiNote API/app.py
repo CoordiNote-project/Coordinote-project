@@ -70,6 +70,43 @@ def test_db():
     
     return jsonify(result)
 
+# User registration route
+@app.route("/users/register", methods=["POST"])
+def register_user():
+    data = request.get_json()
+    
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error": "Username and password required"}), 400
+
+    hashed_password = bcrypt.hash(password)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            INSERT INTO users (us_id, us_name, pwd)
+            VALUES (DEFAULT, %s, %s)
+            RETURNING us_id;
+        """, (username, hashed_password))
+
+        user_id = cur.fetchone()["us_id"]
+        conn.commit()
+
+    except Exception as e:
+        conn.rollback()
+        release_db_connection(conn)
+        return jsonify({"error": str(e)}), 500
+
+    release_db_connection(conn)
+
+    return jsonify({
+        "message": "User created successfully",
+        "user_id": user_id
+    })
 
 # Run server
 
