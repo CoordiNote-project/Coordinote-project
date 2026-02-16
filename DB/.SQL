@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.messages
 (
     m_id integer NOT NULL DEFAULT nextval('messages_id_seq'::regclass),
     m_type text COLLATE pg_catalog."default",
-    creator character varying(100) COLLATE pg_catalog."default",
+    creator integer,
     unl_rad integer NOT NULL DEFAULT 30,
     geom geometry(Point,4326) NOT NULL,
     crt_time integer,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public."possAnsw"
     aswr_id integer NOT NULL,
     aswr_txt text COLLATE pg_catalog."default" NOT NULL,
     tf boolean NOT NULL,
-    CONSTRAINT "possAnsw_pkey" PRIMARY KEY (q_id, answr_id)
+    CONSTRAINT "possAnsw_pkey" PRIMARY KEY (q_id, aswr_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.question
@@ -89,7 +89,7 @@ ALTER TABLE IF EXISTS public.messages
 
 
 ALTER TABLE IF EXISTS public.messages
-    ADD CONSTRAINT uni FOREIGN KEY (uni)
+    ADD CONSTRAINT uni FOREIGN KEY (uni_id)
     REFERENCES public.universe (uni_id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
