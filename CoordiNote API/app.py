@@ -57,8 +57,23 @@ def release_db_connection(conn):
 def home():
     return jsonify({"message": "Coordinote API is running!"})
 
+# Test database connection route
+@app.route("/test-db")
+def test_db():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("SELECT NOW();")
+    result = cur.fetchone()
+    
+    release_db_connection(conn)
+    
+    return jsonify(result)
+
 
 # Run server
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
