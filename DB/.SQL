@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public."possAnsw"
     aswr_id integer NOT NULL,
     aswr_txt text COLLATE pg_catalog."default" NOT NULL,
     tf boolean NOT NULL,
-    CONSTRAINT "possAnsw_pkey" PRIMARY KEY (q_id, aswr_id)
+    CONSTRAINT "possAnsw_pkey" PRIMARY KEY q(_id, aswr_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.question
