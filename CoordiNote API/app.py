@@ -16,6 +16,7 @@ from utils import format_geojson
 
 DB_CONFIG = {
     "database": "CoordiNote_API", # The name of the database we will connect to --> CHANGE IT!!!
+    "database": "coordinotedb", # The name of the database we will connect to --> CHANGE IT!!!
     "user": "postgres",
     "password": "postgres",
     "host": "localhost",
