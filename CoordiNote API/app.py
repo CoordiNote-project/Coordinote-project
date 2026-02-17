@@ -196,8 +196,39 @@ def messages():
         finally:
             release_db_connection(conn)
 
+# Mark message as seen
+@app.route("/messages/seen", methods=["POST"])
+def mark_message_seen():
+    data = request.get_json()
+
+    m_id = data.get("m_id")
+    us_id = data.get("us_id")
+
+    if not m_id or not us_id:
+        return jsonify({"error": "m_id and us_id required"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            INSERT INTO mSeen (m_id, us_id)
+            VALUES (%s, %s)
+            ON CONFLICT (m_id, us_id) DO NOTHING;
+        """, (m_id, us_id))
+
+        conn.commit()
+        return jsonify({"message": "Message marked as seen"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        release_db_connection(conn)
+
     # GET messages
-    uni_id = request.args.get("uni_id")
+    uni_id = request.args.get("uni_id") # !! IT HAS TO BE 2000-XXXX --> We should specify the uni_id
     user_id = request.args.get("user_id")  # optional, for view_once logic
 
     if not uni_id:
@@ -223,14 +254,45 @@ def messages():
                 """, (msg["m_id"], user_id))
                 seen_count = cur.fetchone()["seen_count"]
 
-                if seen_count >= msg["view_once"]:
-                    msg["m_txt"] = "[Message view limit reached]"
+                if msg["view_once"] and seen_count > 0:
+                    msg["m_txt"] = "[Already viewed]"
 
         return jsonify(messages_list)
 
     finally:
         release_db_connection(conn)
 
+# Nearby messages route
+@app.route("/messages/nearby", methods=["GET"])
+def nearby_messages():
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
+    uni_id = request.args.get("uni_id")
+
+    if not lat or not lon or not uni_id:
+        return jsonify({"error": "lat, lon and uni_id required"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            SELECT m.m_id, m.m_txt, m.unl_rad, l.location_id
+            FROM messages m
+            JOIN locations l ON m.location_id = l.location_id
+            WHERE m.uni_id = %s
+            AND ST_DWithin(
+                l.geom::geography,
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography,
+                m.unl_rad
+            );
+        """, (uni_id, lon, lat))
+
+        messages_list = cur.fetchall()
+        return jsonify(messages_list)
+
+    finally:
+        release_db_connection(conn)
 
 # Questions route
 
