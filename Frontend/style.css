@@ -629,73 +629,109 @@ body {
 .hidden { display: none !important; }
 
 /* Phone layout */ 
+/* ═══════════════════════════════════════════════
+   📱 PHONE LAYOUT
+═══════════════════════════════════════════════ */
 @media (max-width: 768px) {
 
-  /* Header: smaller & compact */
-  .header {
-    height: 52px;
-    padding: 0 12px;
-    gap: 8px;
-  }
-
-  /* Hide logo text, only show the pin emoji */
-  .logo-text { display: none; }
-  .logo-pin  { font-size: 1.5rem; }
-
-  /* Smaller nav buttons */
-  .nav-btn {
-    padding: 5px 10px;
-    font-size: 0.75rem;
-  }
-
-  /* Hide username, only show avatar */
-  .user-name { display: none; }
-
-  /* Map panel: map on TOP, sidebar BELOW */
-  #panel-map {
+  /* ── Sidebar goes to the BOTTOM ── */
+  #app {
     flex-direction: column;
   }
 
-  /* Map takes top 55% of screen */
-  .map-container {
-    height: 55vh;
-    order: 1;
-  }
-
-  /* Sidebar becomes a strip at the bottom */
   .sidebar {
     width: 100%;
-    min-width: unset;
-    height: 45vh;
-    order: 2;
+    height: auto;
+    min-height: unset;
     border-right: none;
     border-top: 1px solid var(--border);
+    order: 2;           /* comes AFTER the map */
     padding: 12px;
-    position: static; /* ← fixes the bug where it covered everything! */
+    position: static;   /* not fixed! */
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
   }
 
-  /* Shorter message list */
-  .message-list { max-height: 100px; }
+  /* Logo smaller */
+  .sidebar-logo { margin-bottom: 0; }
+  .logo-text { font-size: 1rem; }
 
-  /* Less padding on other panels */
-  .panel-inner { padding: 16px; }
+  /* Universe list hidden on mobile (use dropdown instead) */
+  .section-title { display: none; }
+  .universe-list { display: none; }
 
-  /* Universe grid: 1 column */
-  .universe-grid { grid-template-columns: 1fr; }
+  /* Stats inline */
+  .stats-box {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    margin: 0;
+  }
 
-  /* Modal slides up from bottom (like WhatsApp) */
-  .modal-overlay { align-items: flex-end; }
-  .modal-box {
+  /* User row compact */
+  .user-row { margin-top: 0; }
+  .user-sub  { display: none; }
+
+  /* ── Map takes TOP 60% of screen ── */
+  .map-wrap {
     width: 100%;
-    max-width: 100%;
-    border-radius: 20px 20px 0 0;
-    max-height: 90vh;
+    height: 60vh;
+    order: 1;           /* comes BEFORE sidebar */
   }
 
-  /* Chips scroll horizontally */
-  .filter-chips {
-    flex-wrap: nowrap;
-    overflow-x: auto;
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── FAB button bigger (easier to tap) ── */
+  .fab {
+    bottom: 12px;
+    right: 12px;
+    padding: 12px 18px;
+    font-size: 0.9rem;
+  }
+
+  /* ── Toolbar smaller ── */
+  .map-toolbar {
+    top: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+  .tool-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  /* ── Side panel full screen on mobile ── */
+  .side-panel {
+    position: fixed;
+    inset: 0;           /* covers everything */
+    width: 100%;
+    z-index: 500;
+    border-radius: 0;
+  }
+
+  /* ── Modal slides up from bottom ── */
+  .modal-backdrop {
+    align-items: flex-end;
+  }
+
+  .modal {
+    width: 100%;
+    border-radius: 20px 20px 0 0;  /* rounded only on top */
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* ── Login modal centered (stays in middle) ── */
+  .modal-sm {
+    border-radius: 20px;
+    margin: 20px;
+    width: calc(100% - 40px);
   }
 
 }
