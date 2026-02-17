@@ -74,13 +74,14 @@ def test_db():
 @app.route("/users/register", methods=["POST"])
 def register_user():
     data = request.get_json()
-    
+
     username = data.get("username")
     password = data.get("password")
 
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
 
+    # Hash password BEFORE database logic
     hashed_password = bcrypt.hash(password)
 
     conn = get_db_connection()
@@ -112,5 +113,3 @@ def register_user():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
