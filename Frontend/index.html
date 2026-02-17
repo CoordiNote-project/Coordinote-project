@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoordiNote</title>
+<!-- Google Fonts, text type plus loaded font weights, headings, logo text, big titles, highlighted UI elements -->
+
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <!-- Leaflet (the map library) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<script>
+function showMain() {
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("mainScreen").style.display = "block";
+}
+</script>
+
+<body>
+
+  <div id="app" class="hidden">
+
+  <!-- building the Sidebar -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo as a header of the sidebar-->
+    <div class="sidebar-logo">
+      <div class="logo-icon">📍</div>
+      <span class="logo-text">Coordi<em>Note</em></span>
+    </div>
+
+    <!-- creating dropdown menu for choosing the universe -->
+<div class="search-wrap">
+  <span class="search-icon">🌍</span>
+  <select id="universeDropdown" class="field-input">
+    <option value="all">All Universes</option>
+    <!-- with Java Script the Universes need to be inserted -->
+  </select>
+</div>
+
+    <!-- showing the Universes and creating the appearance of the universes in the sidebar-->
+    <div class="section-title">My Universes</div>
+    <div class="universe-list" id="universeList">
+      <!-- filled by Javascript - for now they are empty placeholders-->
+      <div class="uni-skeleton"></div>
+      <div class="uni-skeleton"></div>
+      <div class="uni-skeleton"></div>
+    </div>
+
+    <!-- Statistics of how many messages and POIs there are -->
+    <div class="stats-box">
+      <div class="stat">
+        <span class="stat-val" id="statMessages">—</span>
+        <span class="stat-lbl">messages</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-val" id="statPOIs">—</span>
+        <span class="stat-lbl">POIs</span>
+      </div>
+    </div>
+
+    <!-- logged-in user -->
+    <div class="user-row">
+      <div class="avatar" id="userAvatar">WK</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">wilmakahl</div>
+        <div class="user-sub">Logged in</div>
+      </div>
+      <button class="icon-btn" id="logoutBtn" title="Logout">↩</button>
+    </div>
+
+  </aside>
+
+  <!-- map -->
+  <div class="map-wrap">
+    <div id="map"></div>
+
+    <!-- Top controls -->
+    <div class="map-toolbar">
+      <button class="tool-btn active" id="btnMessages" title="Show Messages">💬</button>
+      <button class="tool-btn" id="btnPOIs" title="Show POIs">🗺️</button>
+      <button class="tool-btn" id="btnLocate" title="My Location">📍</button>
+      <button class="tool-btn" id="btnRefresh" title="Refresh">🔄</button>
+    </div>
+
+    <!-- FAB – create message -->
+    <button class="fab" id="fabCreate">
+      <span class="fab-plus">+</span> Drop Message
+    </button>
+  </div>
+
+  <!-- SIDE PANEL (message detail)-->
+  <div class="side-panel" id="sidePanel">
+    <div class="panel-header">
+      <button class="back-btn" id="closePanelBtn">← Back</button>
+      <span class="panel-badge" id="panelBadge">TEXT</span>
+    </div>
+    <div class="panel-body" id="panelBody">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- MODAL – Create Message -->
+  <div class="modal-backdrop hidden" id="createModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📝 New Message</h2>
+        <button class="modal-close" id="closeModalBtn">✕</button>
+      </div>
+
+      <!-- Type tabs -->
+      <div class="type-tabs">
+        <button class="type-tab active" data-type="text">
+          <span>💬</span> Text
+        </button>
+        <button class="type-tab" data-type="yesno">
+          <span>❓</span> Yes / No
+        </button>
+        <button class="type-tab" data-type="poll">
+          <span>📊</span> Poll
+        </button>
+      </div>
+
+      <!-- Form -->
+      <div class="modal-form">
+
+        <!-- Universe -->
+        <label class="field-label">Universe</label>
+        <select id="modalUniverse" class="field-input"></select>
+
+        <!-- Text content (text only) -->
+        <div id="textSection">
+          <label class="field-label">Message</label>
+          <textarea id="modalText" class="field-input field-ta" rows="4"
+            placeholder="Write your message…"></textarea>
+        </div>
+
+        <!-- Question (yesno / poll) -->
+        <div id="questionSection" class="hidden">
+          <label class="field-label">Question</label>
+          <input type="text" id="modalQuestion" class="field-input"
+            placeholder="Enter your question…" />
+        </div>
+
+        <!-- Radius -->
+        <label class="field-label">
+          Unlock Radius — <strong id="radiusDisplay">50 m</strong>
+        </label>
+        <input type="range" id="radiusSlider" min="10" max="500"
+          value="50" class="slider" />
+
+        <!-- Location confirmation -->
+        <div class="location-chip" id="locationChip">
+          🖱️ Click on the map to set location first
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" id="cancelModalBtn">Cancel</button>
+        <button class="btn-submit" id="submitMessageBtn">Drop Message 📍</button>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- end of app -->
+
+  <!-- MODAL – Login -->
+  <div class="modal-backdrop" id="loginModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <div class="login-logo">
+          <div class="logo-icon">📍</div>
+          <span class="logo-text">Coordi<em>Note</em></span>
+        </div>
+      </div>
+      <div class="modal-form">
+        <label class="field-label">Username</label>
+        <input type="text" id="loginUser" class="field-input" placeholder="e.g. wilmakahl" />
+        <label class="field-label" style="margin-top:12px">Password</label>
+        <input type="password" id="loginPass" class="field-input" placeholder="••••••••" />
+        <div class="login-error hidden" id="loginError">❌ Wrong credentials</div>
+      </div>
+      <div class="modal-footer" style="flex-direction:column;gap:8px;">
+        <button class="btn-submit" id="loginBtn">Login</button>
+        <button class="btn-cancel" id="registerBtn">Register new account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast hidden" id="toast"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,737 @@
+/* ═══════════════════════════════════════════════
+   CoordiNote – style.css
+   Hier steht das AUSSEHEN der App:
+   Farben, Abstände, Schriften, Animationen
+═══════════════════════════════════════════════ */
+
+/* ── CSS-Variablen (unsere Farben an einem Ort) ── */
+:root {
+  --bg:        #0c0e14;   /* Hintergrund: sehr dunkel */
+  --surface:   #13151e;   /* Karten-Hintergrund */
+  --card:      #1a1d28;   /* Karten-Elemente */
+  --border:    #252836;   /* Linien / Ränder */
+  --amber:     #f5a623;   /* Hauptfarbe: Orange/Gold */
+  --amber-bg:  rgba(245,166,35,0.12);
+  --teal:      #2de4c8;   /* Akzent: Türkis */
+  --teal-bg:   rgba(45,228,200,0.10);
+  --rose:      #ff4d6d;   /* Warnung / Locked */
+  --text:      #e8eaf0;   /* Haupttext */
+  --muted:     #6b7280;   /* Grauer Text */
+  --radius:    12px;      /* Ecken-Rundung */
+}
+
+/* ── Reset: Browser-Standard entfernen ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ── Body: Alles auf dark background ── */
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
+.header {
+  height: 58px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 20px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-pin { font-size: 1.4rem; }
+.logo-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.logo-text em {
+  font-style: normal;
+  color: var(--amber);
+}
+
+/* Navigation (Mitte) */
+.header-nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+}
+.nav-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--muted);
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nav-btn:hover { color: var(--text); background: var(--border); }
+.nav-btn.active {
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-color: rgba(245,166,35,0.25);
+}
+
+/* User Chip (rechts) */
+.header-right { margin-left: auto; }
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 5px 12px 5px 5px;
+  border-radius: 100px;
+}
+.user-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, var(--teal));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700; color: white;
+}
+.user-name { font-size: 0.8rem; font-weight: 500; }
+
+/* ═══════════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════════ */
+.main {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Jedes Panel nimmt den ganzen Platz ein */
+.panel {
+  display: none;           /* versteckt */
+  width: 100%;
+  height: 100%;
+}
+.panel.active {
+  display: flex;          /* sichtbar wenn aktiv */
+}
+
+/* Panel-Innenbereich (für Universes & POI) */
+.panel-inner {
+  flex: 1;
+  padding: 32px 40px;
+  overflow-y: auto;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.panel-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+/* ═══════════════════════════════════════════════
+   SIDEBAR (Map View)
+═══════════════════════════════════════════════ */
+.sidebar {
+  width: 300px;
+  min-width: 300px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+/* Suchfeld */
+.search-wrap { margin-bottom: 12px; }
+.search-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: rgba(245,166,35,0.4); }
+
+/* Filter-Gruppe */
+.filter-group { margin-bottom: 12px; }
+.filter-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* Chip-Buttons (kleine Filter-Knöpfe) */
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: 100px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { color: var(--text); }
+.chip.active {
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-color: rgba(245,166,35,0.3);
+}
+
+/* Range-Slider */
+.slider {
+  width: 100%;
+  margin-top: 6px;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+
+/* Nachrichten-Liste in der Sidebar */
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.list-empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* Einzelnes Nachrichten-Element */
+.msg-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.msg-item:hover {
+  border-color: rgba(245,166,35,0.3);
+  background: var(--card);
+  transform: translateX(2px);
+}
+.msg-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.msg-item-icon { font-size: 1rem; }
+.msg-item-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.msg-item-dist {
+  font-size: 0.7rem;
+  color: var(--amber);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.msg-item-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* Button: Nachricht erstellen */
+.btn-create {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--amber), #e87b0e);
+  border: none;
+  border-radius: var(--radius);
+  color: #0c0e14;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s, box-shadow 0.15s;
+  margin-top: auto;
+}
+.btn-create:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245,166,35,0.3);
+}
+
+/* ═══════════════════════════════════════════════
+   KARTE
+═══════════════════════════════════════════════ */
+.map-container {
+  flex: 1;
+  height: 100%;
+}
+
+/* Leaflet-Popups anpassen */
+.leaflet-popup-content-wrapper {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+}
+.leaflet-popup-tip { background: var(--card) !important; }
+.leaflet-popup-content { margin: 12px 14px !important; }
+
+/* ═══════════════════════════════════════════════
+   UNIVERSE GRID
+═══════════════════════════════════════════════ */
+.universe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.uni-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.uni-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--uni-color, var(--amber));
+  border-radius: 16px 16px 0 0;
+}
+.uni-card:hover {
+  border-color: rgba(245,166,35,0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.uni-icon { font-size: 1.8rem; margin-bottom: 10px; }
+.uni-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.uni-desc {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+.uni-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.uni-private {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: var(--border);
+  color: var(--muted);
+  font-size: 0.6rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ═══════════════════════════════════════════════
+   POI LIST
+═══════════════════════════════════════════════ */
+.poi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.poi-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.poi-row:hover {
+  border-color: rgba(245,166,35,0.3);
+  transform: translateX(3px);
+}
+.poi-icon-wrap {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.poi-text { flex: 1; min-width: 0; }
+.poi-name { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
+.poi-cat { font-size: 0.72rem; color: var(--muted); }
+.poi-dist { font-size: 0.78rem; font-weight: 600; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════
+   MODAL (Popup-Fenster)
+═══════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;                       /* deckt alles ab */
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+.modal-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 420px;
+  max-width: 95vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity:0 } to { transform:translateY(0); opacity:1 } }
+
+.modal-head {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-head h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.modal-close {
+  width: 30px; height: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.modal-close:hover { color: var(--text); }
+
+.modal-body { padding: 20px; }
+.modal-foot {
+  padding: 0 20px 20px;
+  display: flex;
+  gap: 10px;
+}
+
+/* Typ-Tabs im Modal */
+.type-tabs {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.type-tab {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.15s;
+}
+.type-tab.active {
+  background: var(--card);
+  color: var(--amber);
+  border-color: rgba(245,166,35,0.2);
+}
+
+/* Formular-Felder */
+.field { margin-bottom: 14px; }
+.field-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.field-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field-input:focus { border-color: rgba(245,166,35,0.4); }
+.field-textarea { height: 90px; resize: vertical; }
+
+/* Location Chip */
+.location-chip {
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.location-chip.warning {
+  background: rgba(255,77,109,0.1);
+  border: 1px solid rgba(255,77,109,0.2);
+  color: var(--rose);
+}
+.location-chip.ok {
+  background: var(--teal-bg);
+  border: 1px solid rgba(45,228,200,0.2);
+  color: var(--teal);
+}
+
+/* Modal-Buttons */
+.btn-cancel {
+  flex: 0 0 90px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-cancel:hover { color: var(--text); }
+
+.btn-submit {
+  flex: 1;
+  padding: 10px;
+  background: linear-gradient(135deg, var(--amber), #e87b0e);
+  border: none;
+  border-radius: var(--radius);
+  color: #0c0e14;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(245,166,35,0.3);
+}
+
+.btn-small {
+  padding: 7px 14px;
+  background: var(--amber-bg);
+  border: 1px solid rgba(245,166,35,0.25);
+  border-radius: 8px;
+  color: var(--amber);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════
+   TOAST NOTIFICATION
+═══════════════════════════════════════════════ */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 24px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 9999;
+  animation: slideUp 0.2s ease;
+}
+.toast.success { border-color: rgba(45,228,200,0.4); color: var(--teal); }
+.toast.error   { border-color: rgba(255,77,109,0.4); color: var(--rose); }
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+
+/* Phone layout */ 
+/* ═══════════════════════════════════════════════
+   📱 PHONE LAYOUT
+═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── Sidebar goes to the BOTTOM ── */
+  #app {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    min-height: unset;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    order: 2;           /* comes AFTER the map */
+    padding: 12px;
+    position: static;   /* not fixed! */
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Logo smaller */
+  .sidebar-logo { margin-bottom: 0; }
+  .logo-text { font-size: 1rem; }
+
+  /* Universe list hidden on mobile (use dropdown instead) */
+  .section-title { display: none; }
+  .universe-list { display: none; }
+
+  /* Stats inline */
+  .stats-box {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    margin: 0;
+  }
+
+  /* User row compact */
+  .user-row { margin-top: 0; }
+  .user-sub  { display: none; }
+
+  /* ── Map takes TOP 60% of screen ── */
+  .map-wrap {
+    width: 100%;
+    height: 60vh;
+    order: 1;           /* comes BEFORE sidebar */
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── FAB button bigger (easier to tap) ── */
+  .fab {
+    bottom: 12px;
+    right: 12px;
+    padding: 12px 18px;
+    font-size: 0.9rem;
+  }
+
+  /* ── Toolbar smaller ── */
+  .map-toolbar {
+    top: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+  .tool-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  /* ── Side panel full screen on mobile ── */
+  .side-panel {
+    position: fixed;
+    inset: 0;           /* covers everything */
+    width: 100%;
+    z-index: 500;
+    border-radius: 0;
+  }
+
+  /* ── Modal slides up from bottom ── */
+  .modal-backdrop {
+    align-items: flex-end;
+  }
+
+  .modal {
+    width: 100%;
+    border-radius: 20px 20px 0 0;  /* rounded only on top */
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* ── Login modal centered (stays in middle) ── */
+  .modal-sm {
+    border-radius: 20px;
+    margin: 20px;
+    width: calc(100% - 40px);
+  }
+
+}
