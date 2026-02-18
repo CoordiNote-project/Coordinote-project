@@ -1,27 +1,27 @@
-﻿a;b;c;OBJECTID;COD_SIG;MORADA
--102.470.429.040.503;467.818.175.090.931;Cavalos Marinhos;11;2872;Praça do Império
--10.252.176.086.589;467.820.388.304.847;Reclining Figure: Arched Leg, 4/6;12;2873;Praça do Império, Jardim do CCB, junto à entrada das traseiras do Museu Berardo
--102.514.429.656.313;467.821.801.958.705;Caixa (Desmontagem)2;13;2874;Praça do Império, jardim do Centro Cultural de Belém, junto ao Museu Berardo
--101.921.524.658.116;468.176.540.750.056;Manuel Tito de Morais;157;3018;Jardim público, na confluência da Rua das Amoreiras com a Rua Dom João V
--101.857.532.129.901;468.239.507.834.978;Marquês de Pombal;176;3037;Praça do Marquês de Pombal
--101.641.153.593.287;468.410.904.580.292;Tejo;229;3090;Alameda  Dom Afonso Henriques, (Fonte Monumental)
--101.639.146.239.219;468.411.009.442.316;Sem título (figuras femininas);230;3091;Alameda Dom Afonso Henriques, (Fonte Monumental)
--101.640.982.727.637;468.411.864.047.784;As Tágides;231;3092;Alameda Dom Afonso Henriques, (Fonte Monumental)
--101.673.774.042.648;468.412.116.074.099;Sem título (Alberto Carneiro);232;3093;Alameda  Dom Afonso Henriques, (Saída do Metro Alameda)
--102.207.910.129.833;468.619.347.472.995;Homenagem a Cosme Damião;301;3162;Avenida Machado Santos, (Rotunda Sul, junto ao Estádio da Luz)
--101.856.100.239.206;468.983.822.028.092;Os Amantes (Botero);379;3240;Avenida Nuno Krus Abecassis (antiga Avenida 4 do Alto do Lumiar), Parque Oeste
--101.738.087.315.074;468.531.139.876.266;Ruy de Carvalho;384;4561;Avenida Frei Miguel Contreiras, passeio em frente ao nº56
--101.713.397.496.441;468.542.282.980.479;Progresso na Carreira;641;4562;Bairro da Estacas (Rua Teixeira de Pascoais, Rua Bulhão Pato, Rua Antero de Figueiredo, Avenida Frei Miguel Contreiras)
--101.736.762.843.835;4.679.925.308.052;Paréidolie;961;4627;Praça do Município
--101.677.108.568.899;468.106.161.836.517;Fernando Maurício;1281;4642;Rua da Guia
--101.464.393.585.344;468.946.387.244.544;Zé Pedro;1601;4953;Rua General Silva Freire, Jardim Zé Pedro
--101.938.386.037.227;468.419.814.442.998;Eduardo Lourenço;1602;4954;Praça de Espanha, Parque Gonçalo Ribeiro Telles
--101.726.120.488.001;468.079.003.929.289;Engraxador de Sapatos;1922;4956;Praça da Figueira, Esplanada da Pastelaria Suíça
--101.277.527.005.214;468.506.334.154.326;Madre Teresa de Calcutá;2241;4991;Parque Ribeirinho Oriente ao Braço de Prata (frente à Rua Madre Teresa de Calcutá)
--101.271.663.360.782;468.527.375.403.131;Esculturas Solares;2561;5006;Parque Ribeirinho Oriente ao Braço de Prata (Passeio Eunice Muñoz)
--102.296.906.975.869;467.830.603.086.623;Heróis da Pandemia;2881;5091;Passeio Carlos do Carmo, (entre o Terreiro das Missas e o Jardim das Docas da Ponte, frente à Cordoaria Nacional, junto ao rio)
--102.249.081.406.925;467.842.105.090.679;Homenagem a João Mendes, 1º ocidental a chegar à península coreana;2882;5092;Passeio Carlos do Carmo, Jardim das Docas da Ponte
--101.892.592.368.325;468.399.541.015.964;Nu de Mulher;3521;5122;Avenida de Berna, Jardim da Fundação Calouste Gulbenkian
--101.894.985.256.255;468.397.459.440.477;O Mundo;3522;5123;Avenida de Berna, Jardim da Fundação Calouste Gulbenkian
--101.887.649.440.716;468.386.793.871.946;Uma Ária para o Pato-Real;3841;5124;Avenida de Berna, Jardim da Fundação Calouste Gulbenkian
--101.887.996.695.786;468.650.932.101.979;Memorial Janelas de Liberdade;4481;5165;Campo Grande
+﻿a;b;c
+-10.2470;46.7818;Cavalos Marinhos
+-10.2522;46.7820;Reclining Figure: Arched Leg, 4/6
+-10.2514;46.7822;Caixa (Desmontagem)2
+-10.1922;46.8177;Manuel Tito de Morais
+-10.1858;46.8240;Marquês de Pombal
+-10.1641;46.8411;Tejo
+-10.1639;46.8411;Sem título (figuras femininas)
+-10.1641;46.8412;As Tágides
+-10.1674;46.8412;Sem título (Alberto Carneiro)
+-10.2208;46.8619;Homenagem a Cosme Damião
+-10.1856;46.8984;Os Amantes (Botero)
+-10.1738;46.8531;Ruy de Carvalho
+-10.1713;46.8542;Progresso na Carreira
+-10.1737;46.7993;Paréidolie
+-10.1677;46.8106;Fernando Maurício
+-10.1464;46.8946;Zé Pedro
+-10.1938;46.8420;Eduardo Lourenço
+-10.1726;46.8079;Engraxador de Sapatos
+-10.1278;46.8506;Madre Teresa de Calcutá
+-10.1272;46.8527;Esculturas Solares
+-10.2297;46.7831;Heróis da Pandemia
+-10.2249;46.7842;Homenagem a João Mendes, 1º ocidental a chegar à península coreana
+-10.1893;46.8400;Nu de Mulher
+-10.1895;46.8397;O Mundo
+-10.1888;46.8387;Uma Ária para o Pato-Real
+-10.1888;46.8651;Memorial Janelas de Liberdade

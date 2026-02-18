@@ -1,26 +1,41 @@
+
 import pandas as pd
 import psycopg2
 
-DATABASE_URL = "postgresql://postgres:1234@localhost:5432/coordinote"
+DB_CONFIG = {
+    "database": "coordinote_share",
+    "user": "postgres",
+    "password": "postgres",
+    "host": "localhost",
+    "port": "5432"
+}
 
-df = pd.read_csv("metro_Stations.csv", sep=";")
+def load_csv(file_path, category):
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
 
-conn = psycopg2.connect(DATABASE_URL)
-cur = conn.cursor()
+    df = pd.read_csv(file_path, sep=";", decimal=",")
 
-for index, row in df.iterrows():
-    cur.execute("""
-        INSERT INTO locations (l_name, category, geom)
-        VALUES (%s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
-    """, (
-        row["c"],        # isim
-        "metro",
-        float(row["a"]) / 10000000,  # longitude correction
-        float(row["b"]) / 10000000   # latitude correction
-    ))
+    for _, row in df.iterrows():
+        lon = float(row["a"]) 
+        lat = float(row["b"]) 
 
-conn.commit()
-cur.close()
-conn.close()
+        name = row["c"]
 
-print("The process has been completed.")
+        cur.execute("""
+            INSERT INTO locations (l_name, category, geom)
+            VALUES (%s, %s,
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326)
+            );
+        """, (name, category, lon, lat))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+load_csv("metro_Stations.csv", "metro")
+load_csv("Teatros.csv", "theatre")
+load_csv("Patrimonio_Statues.csv", "statue")
+
+print("ETL completed.")
