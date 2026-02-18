@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
   <!-- Leaflet (the map library) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  
+
   <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -22,36 +22,57 @@ function showMain() {
 
 <body>
 
-  <div id="app" class="hidden">
+ <div id="app">
 
   <!-- building the Sidebar -->
-  <aside class="sidebar" id="sidebar">
+<!-- NEW SIDEBAR WITH TWO VIEWS -->
+<aside class="sidebar" id="sidebar">
 
-    <!-- Logo as a header of the sidebar-->
+  <!-- ═══ SIDEBAR HEADER (always visible) ═══ -->
+  <div class="sidebar-header">
     <div class="sidebar-logo">
       <div class="logo-icon">📍</div>
       <span class="logo-text">Coordi<em>Note</em></span>
     </div>
+  </div>
 
-    <!-- creating dropdown menu for choosing the universe -->
-<div class="search-wrap">
-  <span class="search-icon">🌍</span>
-  <select id="universeDropdown" class="field-input">
-    <option value="all">All Universes</option>
-    <!-- with Java Script the Universes need to be inserted -->
-  </select>
-</div>
+  <!-- ═══ VIEW TOGGLE TABS ═══ -->
+  <div class="view-tabs">
+    <button class="view-tab active" id="tabReceiver" onclick="switchView('receiver')">
+      <span class="tab-icon">📥</span>
+      <span class="tab-label">Receive</span>
+    </button>
+    <button class="view-tab" id="tabSender" onclick="switchView('sender')">
+      <span class="tab-icon">📤</span>
+      <span class="tab-label">Send</span>
+    </button>
+  </div>
 
-    <!-- showing the Universes and creating the appearance of the universes in the sidebar-->
+  <!-- ═══════════════════════════════════════════════
+       📥 RECEIVER VIEW (default visible)
+  ═══════════════════════════════════════════════ -->
+  <div class="sidebar-view active" id="viewReceiver">
+    
+    <!-- Search & Create Universes -->
+    <div class="action-row">
+      <input type="text" id="searchUniverse" class="search-input-small" 
+             placeholder="🔍 Search universes..." oninput="searchUniverses(this.value)"/>
+      <button class="btn-icon-small" id="btnCreateUniverse" 
+              onclick="openCreateUniverseModal()" title="Create Universe">
+        ➕
+      </button>
+    </div>
+
+    <!-- Universe List -->
     <div class="section-title">My Universes</div>
-    <div class="universe-list" id="universeList">
-      <!-- filled by Javascript - for now they are empty placeholders-->
+    <div class="universe-list-new" id="universeListReceiver">
+      <!-- Filled by JavaScript -->
       <div class="uni-skeleton"></div>
       <div class="uni-skeleton"></div>
       <div class="uni-skeleton"></div>
     </div>
 
-    <!-- Statistics of how many messages and POIs there are -->
+    <!-- Stats -->
     <div class="stats-box">
       <div class="stat">
         <span class="stat-val" id="statMessages">—</span>
@@ -64,17 +85,106 @@ function showMain() {
       </div>
     </div>
 
-    <!-- logged-in user -->
-    <div class="user-row">
-      <div class="avatar" id="userAvatar">WK</div>
-      <div class="user-info">
-        <div class="user-name" id="userName">wilmakahl</div>
-        <div class="user-sub">Logged in</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       📤 SENDER VIEW (hidden by default)
+  ═══════════════════════════════════════════════ -->
+  <div class="sidebar-view" id="viewSender">
+    
+    <div class="section-title">Create New Message</div>
+
+    <!-- Message Type -->
+    <div class="form-group-compact">
+      <label class="field-label-small">Type</label>
+      <div class="type-pills">
+        <button class="type-pill active" onclick="setSenderMsgType('text', this)">
+          💬 Text
+        </button>
+        <button class="type-pill" onclick="setSenderMsgType('yesno', this)">
+          ✅ Yes/No
+        </button>
+        <button class="type-pill" onclick="setSenderMsgType('poll', this)">
+          📊 Poll
+        </button>
       </div>
-      <button class="icon-btn" id="logoutBtn" title="Logout">↩</button>
     </div>
 
-  </aside>
+    <!-- Universe Selection -->
+    <div class="form-group-compact">
+      <label class="field-label-small">Universe</label>
+      <select id="senderUniverseSelect" class="field-input-compact">
+        <!-- Filled by JS -->
+      </select>
+    </div>
+
+    <!-- Message Content -->
+    <div class="form-group-compact" id="senderTextGroup">
+      <label class="field-label-small">Message</label>
+      <textarea id="senderTextContent" class="field-input-compact field-ta-compact" 
+                rows="3" placeholder="Write your message..."></textarea>
+    </div>
+
+    <div class="form-group-compact hidden" id="senderQuestionGroup">
+      <label class="field-label-small">Question</label>
+      <input type="text" id="senderQuestionContent" class="field-input-compact"
+             placeholder="Enter your question..."/>
+    </div>
+
+    <!-- Location Selection -->
+    <div class="section-title" style="margin-top:16px">📍 Location</div>
+    
+    <div class="location-options">
+      <button class="location-btn active" id="btnDropPin" onclick="setLocationMode('pin')">
+        <span>📌</span>
+        <span>Drop Pin</span>
+      </button>
+      <button class="location-btn" id="btnSearchLocation" onclick="setLocationMode('search')">
+        <span>🔍</span>
+        <span>Search</span>
+      </button>
+    </div>
+
+    <!-- Location Search (hidden by default) -->
+    <div class="location-search hidden" id="locationSearchBox">
+      <input type="text" id="locationSearchInput" class="search-input-small"
+             placeholder="Search location..." onkeyup="searchLocation(event)"/>
+      <div id="locationResults" class="location-results"></div>
+    </div>
+
+    <!-- Selected Location Display -->
+    <div class="location-display" id="senderLocationDisplay">
+      <div class="location-icon">🖱️</div>
+      <div class="location-text">Click on map to set location</div>
+    </div>
+
+    <!-- Unlock Radius -->
+    <div class="form-group-compact">
+      <label class="field-label-small">
+        Unlock Radius: <strong id="senderRadiusLabel">50m</strong>
+      </label>
+      <input type="range" id="senderRadiusSlider" min="10" max="500" value="50" 
+             class="slider" oninput="updateSenderRadius(this.value)"/>
+    </div>
+
+    <!-- Submit Button -->
+    <button class="btn-submit-sidebar" onclick="submitMessageFromSidebar()">
+      Drop Message 📍
+    </button>
+
+  </div>
+
+  <!-- ═══ USER ROW (always at bottom) ═══ -->
+  <div class="user-row">
+    <div class="avatar" id="userAvatar">WK</div>
+    <div class="user-info">
+      <div class="user-name" id="userName">wilmakahl</div>
+      <div class="user-sub">Logged in</div>
+    </div>
+    <button class="icon-btn" id="logoutBtn" title="Logout">↩</button>
+  </div>
+
+</aside>
 
   <!-- map -->
   <div class="map-wrap">
@@ -82,17 +192,11 @@ function showMain() {
 
     <!-- Top controls -->
     <div class="map-toolbar">
-      <button class="tool-btn active" id="btnMessages" title="Show Messages">💬</button>
+      <button class="tool-btn active" id="btnMessages" title="Show Messages">✉️</button>
       <button class="tool-btn" id="btnPOIs" title="Show POIs">🗺️</button>
       <button class="tool-btn" id="btnLocate" title="My Location">📍</button>
       <button class="tool-btn" id="btnRefresh" title="Refresh">🔄</button>
     </div>
-
-    <!-- FAB – create message -->
-    <button class="fab" id="fabCreate">
-      <span class="fab-plus">+</span> Drop Message
-    </button>
-  </div>
 
   <!-- SIDE PANEL (message detail)-->
   <div class="side-panel" id="sidePanel">
