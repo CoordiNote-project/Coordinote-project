@@ -150,7 +150,7 @@ def universes():
     release_db_connection(conn)
     return jsonify(universes_list)
 
-# Messages route
+# Messages route: POST + GET
 @app.route("/messages", methods=["GET", "POST"])
 def messages():
     conn = get_db_connection()
@@ -158,30 +158,27 @@ def messages():
 
     if request.method == "POST":
         data = request.get_json()
-
         m_type = data.get("m_type")  # "simple" or "question"
-        unl_rad = data.get("unl_rad")  # in meters
-        view_once = data.get("view_once")  # how many times a user can view
-        m_txt = data.get("m_txt")  # message content
-        creator = data.get("creator")  # us_id of the user creating the message
-        uni_id = data.get("uni_id")  # universe ID
-        q_multi = data.get("q_multi")  # question ID if type="question", optional
-        location_id = data.get("location_id")  # optional, POI or coordinates
+        unl_rad = data.get("unl_rad")
+        view_once = data.get("view_once")  # true/false
+        m_txt = data.get("m_txt")
+        creator = data.get("creator")
+        uni_id = data.get("uni_id")
+        q_multi = data.get("q_multi")
+        location_id = data.get("location_id")
 
-        # Validate required fields
-        if not all([m_type, unl_rad, view_once, m_txt, creator, uni_id]):
+        if not all([m_type, unl_rad, view_once is not None, m_txt, creator, uni_id]):
             release_db_connection(conn)
             return jsonify({"error": "Missing required fields"}), 400
 
-        crt_time = datetime.utcnow()  # current UTC timestamp
-        status = False  # message initially unopened
+        crt_time = datetime.utcnow()
+        status = "unopened"
 
         try:
             cur.execute("""
                 INSERT INTO messages (
                     m_type, unl_rad, crt_time, view_once, status, m_txt, creator, uni_id, q_multi, location_id
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING m_id;
             """, (m_type, unl_rad, crt_time, view_once, status, m_txt, creator, uni_id, q_multi, location_id))
 
@@ -196,40 +193,9 @@ def messages():
         finally:
             release_db_connection(conn)
 
-# Mark message as seen
-@app.route("/messages/seen", methods=["POST"])
-def mark_message_seen():
-    data = request.get_json()
-
-    m_id = data.get("m_id")
-    us_id = data.get("us_id")
-
-    if not m_id or not us_id:
-        return jsonify({"error": "m_id and us_id required"}), 400
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    try:
-        cur.execute("""
-            INSERT INTO mSeen (m_id, us_id)
-            VALUES (%s, %s)
-            ON CONFLICT (m_id, us_id) DO NOTHING;
-        """, (m_id, us_id))
-
-        conn.commit()
-        return jsonify({"message": "Message marked as seen"}), 200
-
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-        release_db_connection(conn)
-
     # GET messages
-    uni_id = request.args.get("uni_id") # !! IT HAS TO BE 2000-XXXX --> We should specify the uni_id
-    user_id = request.args.get("user_id")  # optional, for view_once logic
+    uni_id = request.args.get("uni_id")
+    user_id = request.args.get("user_id")  # optional
 
     if not uni_id:
         release_db_connection(conn)
@@ -241,26 +207,78 @@ def mark_message_seen():
             FROM messages
             WHERE uni_id = %s
         """, (uni_id,))
-
         messages_list = cur.fetchall()
 
-        # Apply view_once filtering if user_id provided
+        # Apply view_once filtering
         if user_id:
-            for msg in messages_list:
-                cur.execute("""
-                    SELECT COUNT(*) as seen_count
-                    FROM mSeen
-                    WHERE m_id = %s AND us_id = %s
-                """, (msg["m_id"], user_id))
-                seen_count = cur.fetchone()["seen_count"]
+             for msg in messages_list:
+                if msg["view_once"]:
+                    cur.execute("""
+                        SELECT 1 FROM seen
+                        WHERE m_id = %s AND us_id = %s
+                    """, (msg["m_id"], user_id))
+                    already_seen = cur.fetchone()
 
-                if msg["view_once"] and seen_count > 0:
-                    msg["m_txt"] = "[Already viewed]"
+                if already_seen:
+                    msg["status"] = "already viewed"
+        else:  # non-view-once messages
+            if msg["status"] == "unopened":
+                msg["status"] = "opened"
 
         return jsonify(messages_list)
 
     finally:
         release_db_connection(conn)
+
+
+# Mark message as seen --> WE NEED TO IMPROVE THIS PART - USER WILL NOT INSERT THE DATA, IT NEEDS TO BE AUTOMATICALLY INSERTED WHEN THE USER OPENS THE MESSAGE, WE CAN USE A NEW ENDPOINT FOR THIS OR WE CAN USE THE SAME ENDPOINT FOR GETTING THE MESSAGES AND MARKING THEM AS SEEN
+@app.route("/messages/seen", methods=["POST"])
+def mark_message_seen():
+    data = request.get_json()
+    m_id = data.get("m_id")
+    us_id = data.get("us_id")
+
+    if not m_id or not us_id:
+        return jsonify({"error": "m_id and us_id required"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # insert into seen table
+        cur.execute("""
+            INSERT INTO seen (m_id, us_id)
+            VALUES (%s, %s)
+            ON CONFLICT (m_id, us_id) DO NOTHING;
+        """, (m_id, us_id))
+
+        # Update message status
+        cur.execute("""
+            SELECT view_once FROM messages WHERE m_id = %s
+        """, (m_id,))
+        view_once = cur.fetchone()["view_once"]
+
+        if view_once:
+            new_status = "already viewed"
+        else:
+            new_status = "opened"
+
+        cur.execute("""
+            UPDATE messages
+            SET status = %s
+            WHERE m_id = %s
+        """, (new_status, m_id))
+
+        conn.commit()
+        return jsonify({"message": "Message marked as seen"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        release_db_connection(conn)
+
 
 # Nearby messages route
 @app.route("/messages/nearby", methods=["GET"])
@@ -287,7 +305,6 @@ def nearby_messages():
                 m.unl_rad
             );
         """, (uni_id, lon, lat))
-
         messages_list = cur.fetchall()
         return jsonify(messages_list)
 
