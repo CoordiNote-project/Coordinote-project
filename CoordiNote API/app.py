@@ -223,7 +223,7 @@ def messages():
         data = request.get_json(silent=True)
         if not data:
             return jsonify({"error": "Invalid or missing JSON"}), 400
-        m_type = data.get("m_type")  # "simple" or "question"
+        m_type = data.get("m_type")  # "text" or "poll"
         unl_rad = data.get("unl_rad")
         view_once = data.get("view_once")  # true/false
         m_txt = data.get("m_txt")
@@ -422,7 +422,7 @@ def protected_test():
     })
 
 
-# Questions route - Beko
+# Questions/poll route - Beko
 
 
 # Run server
