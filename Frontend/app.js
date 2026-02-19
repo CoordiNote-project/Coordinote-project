@@ -1,11 +1,12 @@
-// ═══════════════════════════════════════════════
-//  CoordiNote – app.js (rewritten to match your HTML!)
-//  Connects to your HTML with the correct IDs
-// ═══════════════════════════════════════════════
+//
+//  CoordiNote  java script
+//  Connects to HTML with IDs
+// 
 
 // ── Configuration ──
-const API = 'http://localhost:5000/api';
+const API = 'http://localhost:5000';
 const LISBON = [38.7169, -9.1393];
+const USE_API = false; 
 
 // ── Global Variables ──
 let map;
@@ -367,13 +368,11 @@ async function loadMessages() {
 }
 
 function renderMessageMarkers(messages) {
-  // Clear old markers
   messageMarkers.forEach(m => map.removeLayer(m));
   messageMarkers = [];
 
   messages.forEach(msg => {
     if (!msg.latitude || !msg.longitude) return;
-
     const marker = L.circleMarker([msg.latitude, msg.longitude], {
       radius: 14,
       fillColor: typeColor(msg.m_type),
@@ -481,22 +480,13 @@ function filterMessagesByUniverse(uniId) {
 //  LOAD UNIVERSES
 // ═══════════════════════════════════════════════
 async function loadUniverses() {
-  try {
-    const res = await fetch(`${API}/universes`);
-    const data = await res.json();
-    allUniverses = data.universes || [];
-    
-    console.log('✓ Loaded', allUniverses.length, 'universes');
-    fillUniverseDropdowns();
-    renderUniverseListInReceiver(); // ← ADD THIS LINE
-
-  } catch (err) {
-    console.warn('Universe API not reachable');
+  if (!USE_API) {
     allUniverses = getDemoUniverses();
     fillUniverseDropdowns();
-    renderUniverseListInReceiver(); // ← AND THIS LINE
+    renderUniverseListInReceiver();
+    return;
+  }// here API call later
   }
-}
 function fillUniverseDropdowns() {
   // Sidebar dropdown
   const dropdown1 = document.getElementById('universeDropdown');
@@ -555,15 +545,15 @@ function renderPOIMarkers(pois) {
     if (!poi.latitude || !poi.longitude) return;
 
     const style = getPOIStyle(poi.poi_category);
-    
-    const marker = L.circleMarker([poi.latitude, poi.longitude], {
-      radius: 10,
-      fillColor: style.color,
-      fillOpacity: 0.7,
-      color: 'white',
-      weight: 2
-    }).addTo(map);
 
+  const marker = L.marker([poi.latitude, poi.longitude], {
+  icon: L.divIcon({
+    html: `<div style="font-size:1.4rem">${style.icon}</div>`,
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  })
+}).addTo(map);
     marker.bindPopup(`
       <div style="font-family:'DM Sans',sans-serif">
         <div style="font-size:1rem;margin-bottom:4px">${style.icon}</div>
@@ -946,24 +936,14 @@ function submitMessageFromSidebar() {
   }
   
   // Create marker on map
+
   L.circleMarker([senderSelectedLocation.lat, senderSelectedLocation.lng], {
-    radius: 14,
-    fillColor: typeColor(currentSenderMsgType),
-    fillOpacity: 0.85,
-    color: 'white',
-    weight: 2
-  }).addTo(map).bindPopup(`
-    <div style="font-family:'DM Sans',sans-serif">
-      <div style="font-size:0.9rem;font-weight:600;margin-bottom:6px">
-        ${content}
-      </div>
-      <div style="font-size:0.7rem;color:#6b7280">
-        by ${currentUser.username}
-      </div>
-    </div>
-  `).openPopup();
-  
-  showToast('Message dropped! 📍', 'success');
+  radius: 14,
+  fillColor: typeColor(currentSenderMsgType),
+  fillOpacity: 0.85,
+  color: 'white',
+  weight: 2
+}).addTo(map).bindPopup(`...`).openPopup();
   
   // Reset form
   document.getElementById('senderTextContent').value = '';
@@ -1183,12 +1163,12 @@ function renderUniverseListInReceiver() {
   // to make delete work without API, we keep track of "hidden" universes in an array-- just for demo purposes
     const visible = allUniverses.filter(u => !hiddenUniverses.includes(u.uni_id));
 
-  if (!allUniverses.length) {
+  if (!visible.length) {
     list.innerHTML = '<div class="list-empty">No universes found</div>';
     return;
   }
   
-  list.innerHTML = allUniverses.map(u => `
+  list.innerHTML = visible.map(u => `
     <div class="uni-item-new" onclick="filterMessagesByUniverse(${u.uni_id})">
       <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
       <div class="uni-item-text">
