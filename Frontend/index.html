@@ -1,3 +1,5 @@
+<title>CoordiNote  </title>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,8 +23,7 @@ function showMain() {
 </script>
 
 <body>
-
- <div id="app">
+<div id="app">
 
   <!-- building the Sidebar -->
 <!-- NEW SIDEBAR WITH TWO VIEWS -->
@@ -72,18 +73,13 @@ function showMain() {
       <div class="uni-skeleton"></div>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-box">
-      <div class="stat">
-        <span class="stat-val" id="statMessages">—</span>
-        <span class="stat-lbl">messages</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <span class="stat-val" id="statPOIs">—</span>
-        <span class="stat-lbl">POIs</span>
-      </div>
-    </div>
+     <!-- Delete Universe - leave Universe -->
+   <button class="btn-icon-small danger"
+          id="btnDeleteUniverse"
+          onclick="deleteSelectedUniverse()"
+          title="Delete Universe">
+    🗑️
+  </button>
 
   </div>
 
@@ -274,28 +270,36 @@ function showMain() {
 
   </div> <!-- end of app -->
 
-  <!-- MODAL – Login -->
-  <div class="modal-backdrop" id="loginModal">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <div class="login-logo">
-          <div class="logo-icon">📍</div>
-          <span class="logo-text">Coordi<em>Note</em></span>
-        </div>
-      </div>
-      <div class="modal-form">
-        <label class="field-label">Username</label>
-        <input type="text" id="loginUser" class="field-input" placeholder="e.g. wilmakahl" />
-        <label class="field-label" style="margin-top:12px">Password</label>
-        <input type="password" id="loginPass" class="field-input" placeholder="••••••••" />
-        <div class="login-error hidden" id="loginError">❌ Wrong credentials</div>
-      </div>
-      <div class="modal-footer" style="flex-direction:column;gap:8px;">
-        <button class="btn-submit" id="loginBtn">Login</button>
-        <button class="btn-cancel" id="registerBtn">Register new account</button>
+<!-- MODAL – Login -->
+<div class="modal-backdrop" id="loginModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="login-logo">
+        <div class="logo-icon">📍</div>
+        <span class="logo-text">Coordi<em>Note</em></span>
       </div>
     </div>
+    <div class="modal-form">
+      <label class="field-label">Username</label>
+      <input type="text" id="loginUser" class="field-input" placeholder="e.g. wilmakahl" />
+      
+      <label class="field-label" style="margin-top:12px">Password</label>
+      <input type="password" id="loginPass" class="field-input" placeholder="••••••••" />
+      
+      <!-- Confirm Password (hidden by default) -->
+      <div id="confirmPasswordField" class="hidden">
+        <label class="field-label" style="margin-top:12px">Confirm Password</label>
+        <input type="password" id="loginPassConfirm" class="field-input" placeholder="••••••••" />
+      </div>
+      
+      <div class="login-error hidden" id="loginError">❌ Wrong credentials</div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;gap:8px;">
+      <button class="btn-submit" id="loginBtn">Login</button>
+      <button class="btn-cancel" id="registerBtn">Register new account</button>
+    </div>
   </div>
+</div>
 
   <!-- Toast notification -->
   <div class="toast hidden" id="toast"></div>

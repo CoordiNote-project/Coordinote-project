@@ -17,29 +17,59 @@ let selectedLocation = null;
 let currentMsgType = 'text';
 let allUniverses = [];
 let allPOIs = [];
+let isRegisterMode = false;  
 
-// ═══════════════════════════════════════════════
+// 
 //  START APP (when page loads)
-// ═══════════════════════════════════════════════
+//
 document.addEventListener('DOMContentLoaded', () => {
   console.log('✓ CoordiNote starting...');
 
   // Get elements
   const loginBtn = document.getElementById('loginBtn');
+  const registerBtn = document.getElementById('registerBtn');
   const loginModal = document.getElementById('loginModal');
   const app = document.getElementById('app');
-  
-  // Hide app at start
-  if (app) app.classList.add('hidden');
 
   // Login button click
   if (loginBtn) {
     loginBtn.addEventListener('click', handleLogin);
   }
 
-  // Setup event listeners
+  // Register button click
+  if (registerBtn) {
+    registerBtn.addEventListener('click', toggleRegisterMode);
+  }
+
+  // Setup other event listeners
   setupEventListeners();
 });
+// ═══════════════════════════════════════════════
+//  REGISTER MODE TOGGLE
+// ════════════════════════════════════
+
+function toggleRegisterMode() {
+  isRegisterMode = !isRegisterMode;
+  
+  const confirmField = document.getElementById('confirmPasswordField');
+  const loginBtn = document.getElementById('loginBtn');
+  const registerBtn = document.getElementById('registerBtn');
+  const loginError = document.getElementById('loginError');
+  
+  if (isRegisterMode) {
+    // Switch to Register mode
+    confirmField.classList.remove('hidden');
+    loginBtn.textContent = 'Create Account';
+    registerBtn.textContent = 'Back to Login';
+    if (loginError) loginError.classList.add('hidden');
+  } else {
+    // Switch to Login mode
+    confirmField.classList.add('hidden');
+    loginBtn.textContent = 'Login';
+    registerBtn.textContent = 'Register new account';
+    if (loginError) loginError.classList.add('hidden');
+  }
+}
 
 // ═══════════════════════════════════════════════
 //  LOGIN
@@ -49,6 +79,7 @@ function handleLogin() {
   const app = document.getElementById('app');
   const loginUser = document.getElementById('loginUser');
   const loginPass = document.getElementById('loginPass');
+  const loginPassConfirm = document.getElementById('loginPassConfirm');
   const loginError = document.getElementById('loginError');
 
   const username = loginUser?.value.trim();
@@ -63,7 +94,55 @@ function handleLogin() {
     return;
   }
 
-  // Check against demo users
+  // ═══ REGISTER MODE ═══
+  if (isRegisterMode) {
+    const passwordConfirm = loginPassConfirm?.value.trim();
+    
+    // Check passwords match
+    if (password !== passwordConfirm) {
+      if (loginError) {
+        loginError.classList.remove('hidden');
+        loginError.textContent = '❌ Passwords do not match';
+      }
+      return;
+    }
+    
+    // Check password length
+    if (password.length < 4) {
+      if (loginError) {
+        loginError.classList.remove('hidden');
+        loginError.textContent = '❌ Password must be at least 4 characters';
+      }
+      return;
+    }
+    
+    // Check if username already exists
+    const userExists = DEMO_USERS.find(u => u.username === username);
+    if (userExists) {
+      if (loginError) {
+        loginError.classList.remove('hidden');
+        loginError.textContent = '❌ Username already taken';
+      }
+      return;
+    }
+    
+    // Create new user
+    DEMO_USERS.push({ username: username, password: password });
+    
+    showToast('Account created! ✅ You can now login', 'success');
+    
+    // Switch back to login mode
+    toggleRegisterMode();
+    
+    // Clear fields
+    if (loginUser) loginUser.value = '';
+    if (loginPass) loginPass.value = '';
+    if (loginPassConfirm) loginPassConfirm.value = '';
+    
+    return;
+  }
+
+  // ═══ LOGIN MODE ═══
   const validUser = DEMO_USERS.find(u => 
     u.username === username && u.password === password
   );
@@ -91,7 +170,7 @@ function handleLogin() {
         lng: pos.coords.longitude
       };
       console.log('✓ Got user location:', currentUser.location);
-      loadMessages(); // Reload to update lock status
+      loadMessages();
     });
   }
 
@@ -929,4 +1008,198 @@ function onMapClick(e) {
     
     updateLocationDisplay(senderSelectedLocation);
   }
+}
+
+// ═══════════════════════════════════════════════
+//  CREATE & DELETE UNIVERSE
+// ═══════════════════════════════════════════════
+
+let newUniversePublic = true; // Default: public
+
+function openCreateUniverseModal() {
+  const modal = document.getElementById('createUniverseModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeCreateUniverseModal() {
+  const modal = document.getElementById('createUniverseModal');
+  if (modal) modal.classList.add('hidden');
+  
+  // Reset form
+  const nameInput = document.getElementById('newUniverseName');
+  const descInput = document.getElementById('newUniverseDesc');
+  const errorDiv = document.getElementById('universeError');
+  
+  if (nameInput) nameInput.value = '';
+  if (descInput) descInput.value = '';
+  if (errorDiv) errorDiv.classList.add('hidden');
+  
+  // Reset to public
+  newUniversePublic = true;
+  document.getElementById('universePublic')?.classList.add('active');
+  document.getElementById('universePrivate')?.classList.remove('active');
+}
+
+function setUniversePrivacy(isPublic, btn) {
+  newUniversePublic = isPublic;
+  
+  document.querySelectorAll('#createUniverseModal .type-tab').forEach(t => 
+    t.classList.remove('active')
+  );
+  btn.classList.add('active');
+}
+
+async function submitCreateUniverse() {
+  const nameInput = document.getElementById('newUniverseName');
+  const descInput = document.getElementById('newUniverseDesc');
+  const errorDiv = document.getElementById('universeError');
+  
+  const name = nameInput?.value.trim();
+  const desc = descInput?.value.trim();
+  
+  // Validation
+  if (!name) {
+    if (errorDiv) {
+      errorDiv.classList.remove('hidden');
+      errorDiv.textContent = '❌ Please enter a universe name';
+    }
+    return;
+  }
+  
+  if (name.length < 3) {
+    if (errorDiv) {
+      errorDiv.classList.remove('hidden');
+      errorDiv.textContent = '❌ Name must be at least 3 characters';
+    }
+    return;
+  }
+  
+  // Check if name already exists
+  const exists = allUniverses.find(u => 
+    u.uni_name.toLowerCase() === name.toLowerCase()
+  );
+  
+  if (exists) {
+    if (errorDiv) {
+      errorDiv.classList.remove('hidden');
+      errorDiv.textContent = '❌ Universe name already taken';
+    }
+    return;
+  }
+  
+  // Create universe object
+  const newUniverse = {
+    uni_id: Date.now(), // Simple ID generation for demo
+    uni_name: name,
+    descri: desc || 'No description',
+    pub_priv: newUniversePublic,
+    member_count: 1,
+    message_count: 0
+  };
+  
+  try {
+    // Try API first
+    const res = await fetch(`${API}/universes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        universe_name: name,
+        description: desc,
+        is_public: newUniversePublic,
+        creator_id: currentUser?.id || 1001
+      })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      newUniverse.uni_id = data.universe_id || newUniverse.uni_id;
+    }
+  } catch (err) {
+    console.warn('API not available, using local data');
+  }
+  
+  // Add to local array
+  allUniverses.push(newUniverse);
+  
+  // Update UI
+  fillUniverseDropdowns();
+  renderUniverseListInReceiver();
+  
+  showToast('Universe created! 🌐', 'success');
+  closeCreateUniverseModal();
+}
+
+async function deleteUniverse(uniId, event) {
+  event.stopPropagation();
+  
+  if (!confirm('Delete this universe? This cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    // Try API first
+    const res = await fetch(`${API}/universes/${uniId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!res.ok) throw new Error('API error');
+    
+  } catch (err) {
+    console.warn('API not available, deleting locally only');
+  }
+  
+  // Remove from local array
+  allUniverses = allUniverses.filter(u => u.uni_id !== uniId);
+  
+  // Update UI
+  fillUniverseDropdowns();
+  renderUniverseListInReceiver();
+  
+  showToast('Universe deleted', 'success');
+}
+
+// Render universe list in receiver view with delete buttons
+function renderUniverseListInReceiver() {
+  const list = document.getElementById('universeListReceiver');
+  if (!list) return;
+  
+  if (!allUniverses.length) {
+    list.innerHTML = '<div class="list-empty">No universes found</div>';
+    return;
+  }
+  
+  list.innerHTML = allUniverses.map(u => `
+    <div class="uni-item-new" onclick="filterMessagesByUniverse(${u.uni_id})">
+      <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
+      <div class="uni-item-text">
+        <div class="uni-item-name">${u.uni_name}</div>
+        <div class="uni-item-count">${u.message_count || 0} messages</div>
+      </div>
+      <div class="uni-item-delete" onclick="deleteUniverse(${u.uni_id}, event)" title="Delete">
+        🗑️
+      </div>
+    </div>
+  `).join('');
+}
+
+// Helper to get icon for universe
+function getUniverseIcon(name) {
+  const icons = {
+    'LisboaFunfacts': '🏙️',
+    'GeoTech252627': '🎓',
+    'RestaurantReviews': '🍽️',
+    'SunsetViewpoints': '🌅',
+    'LisbonEvents': '🎵',
+    'LisbonRepair': '🔧',
+    'LostAndFound': '🔍',
+    'Swifties': '🎤',
+    'Erasmus': '✈️'
+  };
+  
+  // Try to match by partial name
+  for (const key in icons) {
+    if (name.includes(key)) return icons[key];
+  }
+  
+  return '🌐'; // Default
 }
