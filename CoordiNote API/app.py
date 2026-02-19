@@ -124,7 +124,7 @@ def register_user():
             RETURNING us_id;
         """, (username, hashed_password))
 
-        user_id = cur.fetchone()["us_id"]
+        us_id = cur.fetchone()["us_id"]
         conn.commit()
 
     except Exception as e:
@@ -136,7 +136,7 @@ def register_user():
 
     return jsonify({
         "message": "User created successfully",
-        "user_id": user_id
+        "us_id": us_id
     })
 
 # User login route
@@ -197,7 +197,7 @@ def login_user():
 @app.route("/universes", methods=["GET", "POST"])
 def universes():
 
-    user_id, error = get_current_user()
+    us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
 
@@ -212,22 +212,25 @@ def universes():
                 return jsonify({"error": "Invalid JSON"}), 400
 
             name = data.get("name")
+            access = data.get("access", False)  # "public" or "private"
+                # access is boolean: false = public and is default, true = private
+
             if not name:
                 return jsonify({"error": "Universe name required"}), 400
 
             # Create universe
             cur.execute("""
-                INSERT INTO universe (uni_name)
-                VALUES (%s)
+                INSERT INTO universe (uni_name, access)
+                VALUES (%s, %s)
                 RETURNING uni_id;
-            """, (name,))
+            """, (name, access))
             uni_id = cur.fetchone()["uni_id"]
 
             # Add creator to userUniv
             cur.execute("""
                 INSERT INTO userUniv (us_id, uni_id)
                 VALUES (%s, %s);
-            """, (user_id, uni_id))
+            """, (us_id, uni_id))
 
             conn.commit()
 
@@ -242,7 +245,7 @@ def universes():
             FROM universe u
             JOIN userUniv uu ON u.uni_id = uu.uni_id
             WHERE uu.us_id = %s;
-        """, (user_id,))
+        """, (us_id,))
 
         universes_list = cur.fetchall()
         return jsonify(universes_list)
@@ -258,7 +261,7 @@ def universes():
 @app.route("/universes/<int:uni_id>/join", methods=["POST"])
 def join_universe(uni_id):
 
-    user_id, error = get_current_user()
+    us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
 
@@ -276,7 +279,7 @@ def join_universe(uni_id):
             INSERT INTO userUniv (us_id, uni_id)
             VALUES (%s, %s)
             ON CONFLICT DO NOTHING;
-        """, (user_id, uni_id))
+        """, (us_id, uni_id))
 
         conn.commit()
 
@@ -293,7 +296,7 @@ def join_universe(uni_id):
 @app.route("/universes/<int:uni_id>/leave", methods=["POST"])
 def leave_universe(uni_id):
 
-    user_id, error = get_current_user()
+    us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
 
@@ -304,7 +307,7 @@ def leave_universe(uni_id):
         cur.execute("""
             DELETE FROM userUniv
             WHERE us_id = %s AND uni_id = %s;
-        """, (user_id, uni_id))
+        """, (us_id, uni_id))
 
         conn.commit()
 
@@ -316,6 +319,11 @@ def leave_universe(uni_id):
 # Messages route: POST + GET
 @app.route("/messages", methods=["GET", "POST"])
 def messages():
+
+    us_id, error = get_current_user()
+    if error:
+        return jsonify({"error": error}), 401
+
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -327,12 +335,11 @@ def messages():
         unl_rad = data.get("unl_rad")
         view_once = data.get("view_once")  # true/false
         m_txt = data.get("m_txt")
-        creator = data.get("creator")
         uni_id = data.get("uni_id")
         q_multi = data.get("q_multi")
         location_id = data.get("location_id")
 
-        if not m_type or unl_rad is None or view_once is None or not m_txt or not creator or not uni_id:
+        if not m_type or unl_rad is None or view_once is None or not m_txt or not uni_id:
             release_db_connection(conn)
             return jsonify({"error": "Missing required fields"}), 400
 
@@ -342,7 +349,7 @@ def messages():
         cur.execute("""
             SELECT 1 FROM userUniv
             WHERE us_id = %s AND uni_id = %s;
-        """, (user_id, uni_id))
+        """, (us_id, uni_id))
 
         if not cur.fetchone():
             return jsonify({"error": "You are not a member of this universe"}), 403
@@ -350,10 +357,10 @@ def messages():
         try:
             cur.execute("""
                 INSERT INTO messages (
-                    m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
+                    m_type, unl_rad, crt_time, view_once, m_txt, us_id, uni_id, q_multi, location_id
                 ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING m_id;
-            """, (m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id))
+            """, (m_type, unl_rad, crt_time, view_once, m_txt, us_id, uni_id, q_multi, location_id))
 
             m_id = cur.fetchone()["m_id"]
             conn.commit()
@@ -368,7 +375,7 @@ def messages():
 
     # GET messages
     uni_id = request.args.get("uni_id")
-    user_id = request.args.get("user_id")  # optional
+    # user comes from token
 
     if not uni_id:
         release_db_connection(conn)
@@ -377,9 +384,11 @@ def messages():
     try:
         cur.execute("""
             SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
-            FROM messages
-            WHERE uni_id = %s
-        """, (uni_id,))
+            FROM messages m
+            JOIN userUniv uu ON m.uni_id = uu.uni_id
+            WHERE m.uni_id = %s
+            AND uu.us_id = %s
+        """, (uni_id, us_id))
         messages_list = cur.fetchall()
 
         return jsonify(messages_list)
@@ -393,7 +402,7 @@ def messages():
 def open_message(m_id):
 
     # Get user from token
-    user_id, error = get_current_user()
+    us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
 
@@ -419,7 +428,7 @@ def open_message(m_id):
             cur.execute("""
                 SELECT 1 FROM seen
                 WHERE m_id = %s AND us_id = %s
-            """, (m_id, user_id))
+            """, (m_id, us_id))
             already_seen = cur.fetchone()
 
             if already_seen:
@@ -429,7 +438,7 @@ def open_message(m_id):
             cur.execute("""
                 INSERT INTO seen (m_id, us_id)
                 VALUES (%s, %s)
-            """, (m_id, user_id))
+            """, (m_id, us_id))
 
             conn.commit()
 
@@ -481,14 +490,14 @@ def nearby_messages():
 # Protected test route
 @app.route("/protected-test")
 def protected_test():
-    user_id, error = get_current_user()
+    us_id, error = get_current_user()
 
     if error:
         return jsonify({"error": error}), 401
 
     return jsonify({
         "message": "Access granted",
-        "user_id": user_id
+        "us_id": us_id
     })
 
 
