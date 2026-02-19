@@ -120,10 +120,17 @@ function showMain() {
          placeholder="Enter your question..."/>
   
   <label class="field-label-small" style="margin-top:10px">Answer Options</label>
-  <div id="answersList">
-    <input type="text" class="field-input-compact answer-option" placeholder="Option 1" style="margin-bottom:6px"/>
-    <input type="text" class="field-input-compact answer-option" placeholder="Option 2" style="margin-bottom:6px"/>
+<!-- so that the first two options are wrapped und display:none are and only when a third is being added all are visible-->
+<div id="answersList">
+  <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+    <input type="text" class="field-input-compact answer-option" placeholder="Option 1" style="flex:1"/>
+    <button onclick="removeAnswerField(this)" style="background:none;border:1px solid #ff4d6d;border-radius:6px;padding:4px 8px;color:#ff4d6d;cursor:pointer;flex-shrink:0;display:none">✕</button>
   </div>
+  <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+    <input type="text" class="field-input-compact answer-option" placeholder="Option 2" style="flex:1"/>
+    <button onclick="removeAnswerField(this)" style="background:none;border:1px solid #ff4d6d;border-radius:6px;padding:4px 8px;color:#ff4d6d;cursor:pointer;flex-shrink:0;display:none">✕</button>
+  </div>
+</div>
   <button onclick="addAnswerField()" 
           style="background:none;border:1px dashed #2d3048;border-radius:8px;
                  padding:6px;color:#6b7280;cursor:pointer;width:100%;margin-top:4px">
@@ -163,7 +170,7 @@ function showMain() {
       <label class="field-label-small">
         Unlock Radius: <strong id="senderRadiusLabel">50m</strong>
       </label>
-      <input type="range" id="senderRadiusSlider" min="10" max="500" value="50" 
+      <input type="range" id="senderRadiusSlider" min="20" max="500" value="50" 
              class="slider" oninput="updateSenderRadius(this.value)"/>
     </div>
 

@@ -20,6 +20,7 @@ let allUniverses = [];
 let allPOIs = [];
 let isRegisterMode = false;  
 let hiddenUniverses = []; // universes the user has "left"
+let messageCircles = {}; // saves circles per m_id
 
 // 
 //  START APP (when page loads)
@@ -46,9 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup other event listeners
   setupEventListeners();
 });
-// ═══════════════════════════════════════════════
+// 
 //  REGISTER MODE TOGGLE
-// ════════════════════════════════════
+// 
 
 function toggleRegisterMode() {
   isRegisterMode = !isRegisterMode;
@@ -425,6 +426,17 @@ function showMessageDetail(msg) {
     </div>
   `;
 
+   if (msg.creator_name === currentUser?.username) {
+    body += `
+      <button onclick="deleteMessage(${msg.m_id})" 
+              style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);
+                     border-radius:8px;padding:8px 12px;color:#ff4d6d;cursor:pointer;
+                     font-size:0.8rem;margin-bottom:12px;width:100%">
+        🗑️ Delete Message
+      </button>
+    `;
+  }
+
   if (msg.distance !== undefined) {
     const locked = msg.distance > (msg.unl_rad || 50);
 
@@ -474,6 +486,30 @@ function showMessageDetail(msg) {
 function closeSidePanel() {
   const panel = document.getElementById('sidePanel');
   if (panel) panel.classList.remove('active');
+}
+
+async function deleteMessage(msgId) {
+  try {
+    if (USE_API) {
+      const res = await fetch(`${API}/messages/${msgId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${currentUser.token}` }
+      });
+      if (!res.ok) throw new Error('API error');
+    }
+  } catch (err) {
+    console.warn('API not available, deleting locally');
+  }
+    if (messageCircles[msgId]) {
+    map.removeLayer(messageCircles[msgId]);
+    delete messageCircles[msgId];
+  }
+
+  allMessages = allMessages.filter(m => m.m_id !== msgId);
+  renderMessageMarkers(allMessages);
+  closeSidePanel();
+  updateStats();
+  showToast('Message deleted 🗑️', 'success');
 }
 
 function filterMessagesByUniverse(uniId) {
@@ -813,9 +849,9 @@ function getDemoPOIs() {
   ];
 }
 
-// ═══════════════════════════════════════════════
+// 
 //  SIDEBAR VIEW SWITCHING
-// ═══════════════════════════════════════════════
+// 
 
 let currentSenderMsgType = 'text';
 let senderSelectedLocation = null;
@@ -987,6 +1023,16 @@ L.marker([senderSelectedLocation.lat, senderSelectedLocation.lng], {
     <div style="font-size:0.7rem;color:#6b7280">by ${currentUser.username}</div>
   </div>
 `).openPopup();
+
+// Buffer circle für unlock radius
+const circle = L.circle([senderSelectedLocation.lat, senderSelectedLocation.lng], {
+  radius: radius,  // in meters
+  fillColor: '#2de4c8',
+  fillOpacity: 0.1,
+  color: '#2de4c8',
+  weight: 1,
+  dashArray: '5, 5'
+}).addTo(map);
 
   // Reset form
   document.getElementById('senderTextContent').value = '';
@@ -1221,10 +1267,33 @@ function getUniverseIcon(name) {
 function addAnswerField() {
   const list = document.getElementById('answersList');
   const count = list.querySelectorAll('.answer-option').length + 1;
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'field-input-compact answer-option';
-  input.placeholder = `Option ${count}`;
-  input.style.marginBottom = '6px';
-  list.appendChild(input);
+  
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+  wrapper.innerHTML = `
+    <input type="text" class="field-input-compact answer-option" 
+           placeholder="Option ${count}" style="flex:1"/>
+    <button onclick="removeAnswerField(this)" 
+            style="background:none;border:1px solid #ff4d6d;border-radius:6px;
+                   padding:4px 8px;color:#ff4d6d;cursor:pointer;flex-shrink:0">
+      ✕
+    </button>
+  `;
+  list.appendChild(wrapper);
+  updateRemoveButtons();
+}
+
+function removeAnswerField(btn) {
+  const list = document.getElementById('answersList');
+  btn.parentElement.remove();
+  updateRemoveButtons();
+}
+
+function updateRemoveButtons() {
+  const list = document.getElementById('answersList');
+  const wrappers = list.querySelectorAll('div');
+  wrappers.forEach(wrapper => {
+    const btn = wrapper.querySelector('button');
+    if (btn) btn.style.display = wrappers.length <= 2 ? 'none' : 'block';
+  });
 }
