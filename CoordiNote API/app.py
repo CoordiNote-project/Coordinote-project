@@ -47,6 +47,33 @@ def get_db_connection():
 def release_db_connection(conn):
     db_pool.putconn(conn)
 
+def get_current_user():
+    token = request.headers.get("Authorization")
+
+    if not token:
+        return None, "Missing token"
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            SELECT us_id, expires_at
+            FROM sessions
+            WHERE token = %s
+        """, (token,))
+        session = cur.fetchone()
+
+        if not session:
+            return None, "Invalid token"
+
+        if session["expires_at"] < datetime.utcnow():
+            return None, "Token expired"
+
+        return session["us_id"], None
+
+    finally:
+        release_db_connection(conn)
 
 # Test route
 @app.route("/")
@@ -70,14 +97,19 @@ def test_db():
 @app.route("/users/register", methods=["POST"])
 def register_user():
     data = request.get_json(silent=True)
+
     if not data:
         return jsonify({"error": "Invalid or missing JSON body"}), 400
 
     username = data.get("username")
     password = data.get("password")
+    repeat_password = data.get("repeat_password")
 
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
+    if not username or not password or not repeat_password:
+        return jsonify({"error": "All fields required"}), 400
+
+    if password != repeat_password:
+        return jsonify({"error": "Passwords do not match"}), 400
 
     # Hash password BEFORE database logic
     hashed_password = bcrypt.hash(password)
@@ -128,11 +160,38 @@ def login_user():
 
     if not user:
         return jsonify({"error": "User not found"}), 404
+    
+    if bcrypt.verify(password, user["pwd"]): # Verify the provided password against the hashed password stored in the database using bcrypt's verify function. If the verification is successful, it means the provided password is correct.
+        # Generate token
+        token = str(uuid.uuid4())
 
-    if bcrypt.verify(password, user["pwd"]):
-        return jsonify({"message": "Login successful", "user_id": user["us_id"]})
+        # Set expiration (72 hours)
+        expires_at = datetime.utcnow() + timedelta(hours=72)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            cur.execute("""
+                INSERT INTO sessions (us_id, token, expires_at)
+                VALUES (%s, %s, %s)
+            """, (user["us_id"], token, expires_at))
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            release_db_connection(conn)
+            return jsonify({"error": str(e)}), 500
+
+        release_db_connection(conn)
+
+        return jsonify({
+            "message": "Login successful",
+            "token": token
+        })
     else:
-        return jsonify({"error": "Incorrect password"}), 401
+        return jsonify({"error": "Username and password do not match. Try again."}), 401
 
 # Create universes route
 @app.route("/universes", methods=["GET", "POST"])
@@ -183,7 +242,7 @@ def messages():
             cur.execute("""
                 INSERT INTO messages (
                     m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING m_id;
             """, (m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id))
 
@@ -255,7 +314,7 @@ def messages():
 #    finally:
 #        release_db_connection(conn)
 
-# Mark as opened per user
+# Mark message as opened per user
 @app.route("/messages/<int:m_id>/open", methods=["POST"])
 def open_message(m_id):
     data = request.get_json(silent=True)
@@ -349,7 +408,21 @@ def nearby_messages():
     finally:
         release_db_connection(conn)
 
-# Questions route
+# Protected test route
+@app.route("/protected-test")
+def protected_test():
+    user_id, error = get_current_user()
+
+    if error:
+        return jsonify({"error": error}), 401
+
+    return jsonify({
+        "message": "Access granted",
+        "user_id": user_id
+    })
+
+
+# Questions route - Beko
 
 
 # Run server
