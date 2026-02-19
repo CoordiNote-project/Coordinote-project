@@ -219,7 +219,7 @@ def universes():
 
             # Insert universe and get uni_id
             cur.execute("""
-                INSERT INTO universe (uni_name, access)
+                INSERT INTO universes (uni_name, access)
                 VALUES (%s, %s)
                 RETURNING uni_id;
             """, (name, access))
@@ -242,7 +242,7 @@ def universes():
         # GET only universes the user belongs to
         cur.execute("""
             SELECT u.uni_id, u.uni_name, u.access
-            FROM universe u
+            FROM universes u
             JOIN user_univ uu ON u.uni_id = uu.uni_id
             WHERE uu.us_id = %s;
         """, (us_id,))
@@ -283,7 +283,7 @@ def join_universe(uni_id):
 
     try:
         # Check universe exists
-        cur.execute("SELECT 1 FROM universe WHERE uni_id = %s;", (uni_id,))
+        cur.execute("SELECT 1 FROM universes WHERE uni_id = %s;", (uni_id,))
         if not cur.fetchone():
             return jsonify({"error": "Universe not found"}), 404
 
