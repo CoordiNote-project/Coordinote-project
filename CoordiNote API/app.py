@@ -47,6 +47,33 @@ def get_db_connection():
 def release_db_connection(conn):
     db_pool.putconn(conn)
 
+def get_current_user():
+    token = request.headers.get("Authorization")
+
+    if not token:
+        return None, "Missing token"
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            SELECT us_id, expires_at
+            FROM sessions
+            WHERE token = %s
+        """, (token,))
+        session = cur.fetchone()
+
+        if not session:
+            return None, "Invalid token"
+
+        if session["expires_at"] < datetime.utcnow():
+            return None, "Token expired"
+
+        return session["us_id"], None
+
+    finally:
+        release_db_connection(conn)
 
 # Test route
 @app.route("/")
@@ -69,13 +96,20 @@ def test_db():
 # User registration route
 @app.route("/users/register", methods=["POST"])
 def register_user():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON body"}), 400
 
     username = data.get("username")
     password = data.get("password")
+    repeat_password = data.get("repeat_password")
 
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
+    if not username or not password or not repeat_password:
+        return jsonify({"error": "All fields required"}), 400
+
+    if password != repeat_password:
+        return jsonify({"error": "Passwords do not match"}), 400
 
     # Hash password BEFORE database logic
     hashed_password = bcrypt.hash(password)
@@ -108,10 +142,12 @@ def register_user():
 # User login route
 @app.route("/users/login", methods=["POST"])
 def login_user():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON"}), 400
+    
     username = data.get("username")
     password = data.get("password")
-
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
 
@@ -124,11 +160,38 @@ def login_user():
 
     if not user:
         return jsonify({"error": "User not found"}), 404
+    
+    if bcrypt.verify(password, user["pwd"]): # Verify the provided password against the hashed password stored in the database using bcrypt's verify function. If the verification is successful, it means the provided password is correct.
+        # Generate token
+        token = str(uuid.uuid4())
 
-    if bcrypt.verify(password, user["pwd"]):
-        return jsonify({"message": "Login successful", "user_id": user["us_id"]})
+        # Set expiration (72 hours)
+        expires_at = datetime.utcnow() + timedelta(hours=72)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            cur.execute("""
+                INSERT INTO sessions (us_id, token, expires_at)
+                VALUES (%s, %s, %s)
+            """, (user["us_id"], token, expires_at))
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            release_db_connection(conn)
+            return jsonify({"error": str(e)}), 500
+
+        release_db_connection(conn)
+
+        return jsonify({
+            "message": "Login successful",
+            "token": token
+        })
     else:
-        return jsonify({"error": "Incorrect password"}), 401
+        return jsonify({"error": "Username and password do not match. Try again."}), 401
 
 # Create universes route
 @app.route("/universes", methods=["GET", "POST"])
@@ -157,8 +220,10 @@ def messages():
     cur = conn.cursor()
 
     if request.method == "POST":
-        data = request.get_json()
-        m_type = data.get("m_type")  # "simple" or "question"
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON"}), 400
+        m_type = data.get("m_type")  # "text" or "poll"
         unl_rad = data.get("unl_rad")
         view_once = data.get("view_once")  # true/false
         m_txt = data.get("m_txt")
@@ -167,20 +232,19 @@ def messages():
         q_multi = data.get("q_multi")
         location_id = data.get("location_id")
 
-        if not all([m_type, unl_rad, view_once is not None, m_txt, creator, uni_id]):
+        if not m_type or unl_rad is None or view_once is None or not m_txt or not creator or not uni_id:
             release_db_connection(conn)
             return jsonify({"error": "Missing required fields"}), 400
 
         crt_time = datetime.utcnow()
-        status = "unopened"
 
         try:
             cur.execute("""
                 INSERT INTO messages (
-                    m_type, unl_rad, crt_time, view_once, status, m_txt, creator, uni_id, q_multi, location_id
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING m_id;
-            """, (m_type, unl_rad, crt_time, view_once, status, m_txt, creator, uni_id, q_multi, location_id))
+            """, (m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id))
 
             m_id = cur.fetchone()["m_id"]
             conn.commit()
@@ -203,27 +267,11 @@ def messages():
 
     try:
         cur.execute("""
-            SELECT m_id, m_type, unl_rad, crt_time, view_once, status, m_txt, creator, uni_id, q_multi, location_id
+            SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
             FROM messages
             WHERE uni_id = %s
         """, (uni_id,))
         messages_list = cur.fetchall()
-
-        # Apply view_once filtering
-        if user_id:
-             for msg in messages_list:
-                if msg["view_once"]:
-                    cur.execute("""
-                        SELECT 1 FROM seen
-                        WHERE m_id = %s AND us_id = %s
-                    """, (msg["m_id"], user_id))
-                    already_seen = cur.fetchone()
-
-                if already_seen:
-                    msg["status"] = "already viewed"
-        else:  # non-view-once messages
-            if msg["status"] == "unopened":
-                msg["status"] = "opened"
 
         return jsonify(messages_list)
 
@@ -232,45 +280,94 @@ def messages():
 
 
 # Mark message as seen --> WE NEED TO IMPROVE THIS PART - USER WILL NOT INSERT THE DATA, IT NEEDS TO BE AUTOMATICALLY INSERTED WHEN THE USER OPENS THE MESSAGE, WE CAN USE A NEW ENDPOINT FOR THIS OR WE CAN USE THE SAME ENDPOINT FOR GETTING THE MESSAGES AND MARKING THEM AS SEEN
-@app.route("/messages/seen", methods=["POST"])
-def mark_message_seen():
-    data = request.get_json()
-    m_id = data.get("m_id")
-    us_id = data.get("us_id")
+#@app.route("/messages/seen", methods=["POST"])
+#def mark_message_seen():
+#    data = request.get_json(silent=True)
 
-    if not m_id or not us_id:
-        return jsonify({"error": "m_id and us_id required"}), 400
+#    if not data:
+#        return jsonify({"error": "Invalid or missing JSON"}), 400
+    
+#    m_id = data.get("m_id")
+#    us_id = data.get("us_id")
+
+#    if not m_id or not us_id:
+#        return jsonify({"error": "m_id and us_id required"}), 400
+
+#    conn = get_db_connection()
+#    cur = conn.cursor()
+
+#    try:
+        # insert into seen table
+#        cur.execute("""
+#            INSERT INTO seen (m_id, us_id)
+#            VALUES (%s, %s)
+#            ON CONFLICT (m_id, us_id) DO NOTHING;
+#        """, (m_id, us_id))
+        
+#        conn.commit()
+#        return jsonify({"message": "Message marked as seen"}), 200
+
+#    except Exception as e:
+#        conn.rollback()
+#        return jsonify({"error": str(e)}), 500
+
+#    finally:
+#        release_db_connection(conn)
+
+# Mark message as opened per user
+@app.route("/messages/<int:m_id>/open", methods=["POST"])
+def open_message(m_id):
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # insert into seen table
+        # Get message
         cur.execute("""
-            INSERT INTO seen (m_id, us_id)
-            VALUES (%s, %s)
-            ON CONFLICT (m_id, us_id) DO NOTHING;
-        """, (m_id, us_id))
-
-        # Update message status
-        cur.execute("""
-            SELECT view_once FROM messages WHERE m_id = %s
-        """, (m_id,))
-        view_once = cur.fetchone()["view_once"]
-
-        if view_once:
-            new_status = "already viewed"
-        else:
-            new_status = "opened"
-
-        cur.execute("""
-            UPDATE messages
-            SET status = %s
+            SELECT m_id, m_txt, view_once
+            FROM messages
             WHERE m_id = %s
-        """, (new_status, m_id))
+        """, (m_id,))
+        message = cur.fetchone()
 
-        conn.commit()
-        return jsonify({"message": "Message marked as seen"}), 200
+        if not message:
+            return jsonify({"error": "Message not found"}), 404
+
+        # If view_once = TRUE
+        if message["view_once"]:
+
+            cur.execute("""
+                SELECT 1 FROM seen
+                WHERE m_id = %s AND us_id = %s
+            """, (m_id, user_id))
+
+            already_seen = cur.fetchone()
+
+            if already_seen:
+                return jsonify({"status": "already viewed"}), 403
+
+            # First time opening → insert
+            cur.execute("""
+                INSERT INTO seen (m_id, us_id)
+                VALUES (%s, %s)
+            """, (m_id, user_id))
+
+            conn.commit()
+
+        # Return message content
+        return jsonify({
+            "status": "opened",
+            "message": message["m_txt"]
+        }), 200
 
     except Exception as e:
         conn.rollback()
@@ -311,7 +408,21 @@ def nearby_messages():
     finally:
         release_db_connection(conn)
 
-# Questions route
+# Protected test route
+@app.route("/protected-test")
+def protected_test():
+    user_id, error = get_current_user()
+
+    if error:
+        return jsonify({"error": error}), 401
+
+    return jsonify({
+        "message": "Access granted",
+        "user_id": user_id
+    })
+
+
+# Questions/poll route - Beko
 
 
 # Run server
