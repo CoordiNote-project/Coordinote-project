@@ -205,7 +205,7 @@ def universes():
     cur = conn.cursor()
 
     try:
-        # CREATE UNIVERSE
+        # Create universe
         if request.method == "POST":
             data = request.get_json(silent=True)
             if not data:
@@ -217,7 +217,7 @@ def universes():
             if not name:
                 return jsonify({"error": "Universe name required"}), 400
 
-            # Create universe
+            # Insert universe and get uni_id
             cur.execute("""
                 INSERT INTO universe (uni_name, access)
                 VALUES (%s, %s)
@@ -228,7 +228,7 @@ def universes():
             # Add creator to user_univ
             cur.execute("""
                 INSERT INTO user_univ (us_id, uni_id)
-                VALUES (%s, %s);
+                VALUES (%s, %s)
                 ON CONFLICT DO NOTHING;
             """, (us_id, uni_id))
             
@@ -241,9 +241,19 @@ def universes():
 
         # GET only universes the user belongs to
         cur.execute("""
+            SELECT u.uni_id, u.uni_name, u.access
+            FROM universe u
+            JOIN user_univ uu ON u.uni_id = uu.uni_id
+            WHERE uu.us_id = %s;
+        """, (us_id,))
+
+        universes_list = cur.fetchall()
+        return jsonify(universes_list)
+
+        cur.execute("""
             SELECT m.m_id, m.m_type, m.unl_rad, m.crt_time,
                 m.view_once, m.m_txt, m.creator,
-                m.uni_id, m.q_multi, m.location_id
+                m.uni_id, m.poll, m.location_id
             FROM messages m
             JOIN user_univ uu ON m.uni_id = uu.uni_id
             WHERE m.uni_id = %s
@@ -340,7 +350,7 @@ def messages():
         view_once = data.get("view_once")  # true/false
         m_txt = data.get("m_txt")
         uni_id = data.get("uni_id")
-        q_multi = data.get("q_multi")
+        poll = data.get("poll")
         location_id = data.get("location_id")
 
         if not m_type or unl_rad is None or view_once is None or not m_txt or not uni_id:
@@ -361,10 +371,10 @@ def messages():
         try:
             cur.execute("""
                 INSERT INTO messages (
-                    m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
+                    m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, poll, location_id
                 ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING m_id;
-            """, (m_type, unl_rad, crt_time, view_once, m_txt, us_id, uni_id, q_multi, location_id))
+            """, (m_type, unl_rad, crt_time, view_once, m_txt, us_id, uni_id, poll, location_id))
 
             m_id = cur.fetchone()["m_id"]
             conn.commit()
@@ -387,7 +397,7 @@ def messages():
 
     try:
         cur.execute("""
-            SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
+            SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, poll, location_id
             FROM messages m
             JOIN user_univ uu ON m.uni_id = uu.uni_id
             WHERE m.uni_id = %s
