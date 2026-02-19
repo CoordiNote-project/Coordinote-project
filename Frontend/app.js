@@ -265,9 +265,9 @@ function setupEventListeners() {
   }
 }
 
-// ═══════════════════════════════════════════════
+// 
 //  MAP
-// ═══════════════════════════════════════════════
+// 
 function initMap() {
   console.log('✓ Initializing map...');
   
@@ -339,9 +339,9 @@ function locateUser() {
   );
 }
 
-// ═══════════════════════════════════════════════
+// 
 //  LOAD MESSAGES
-// ═══════════════════════════════════════════════
+// 
 async function loadMessages() {
   if (!map) return;
   
@@ -373,13 +373,14 @@ function renderMessageMarkers(messages) {
 
   messages.forEach(msg => {
     if (!msg.latitude || !msg.longitude) return;
-    const marker = L.circleMarker([msg.latitude, msg.longitude], {
-      radius: 14,
-      fillColor: typeColor(msg.m_type),
-      fillOpacity: 0.85,
-      color: 'white',
-      weight: 2
-    }).addTo(map);
+   const marker = L.marker([msg.latitude, msg.longitude], {
+  icon: L.divIcon({
+    html: `<div style="font-size:1.4rem">${typeIcon(msg.m_type)}</div>`,
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  })
+}).addTo(map);
 
     // Popup
     marker.bindPopup(`
@@ -387,11 +388,11 @@ function renderMessageMarkers(messages) {
         <div style="font-size:0.7rem;color:#6b7280;margin-bottom:4px">
           ${typeIcon(msg.m_type)} ${msg.m_type?.toUpperCase()}
         </div>
-        <div style="font-size:0.9rem;font-weight:600;margin-bottom:6px">
-          ${msg.m_txt || msg.question_text || 'Message'}
-        </div>
         <div style="font-size:0.72rem;color:#6b7280">
           by ${msg.creator_name || 'unknown'}
+           </div>
+    <div style="font-size:0.75rem;color:#6b7280;margin-top:4px">
+      🔍 Click for details
         </div>
       </div>
     `);
@@ -412,12 +413,10 @@ function showMessageDetail(msg) {
 
   if (!panel || !panelBody) return;
 
-  // Set badge
   if (panelBadge) {
     panelBadge.textContent = msg.m_type.toUpperCase();
   }
 
-  // Build body content
   let body = `
     <div style="margin-bottom:16px">
       <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px">
@@ -426,25 +425,35 @@ function showMessageDetail(msg) {
     </div>
   `;
 
-  if (msg.m_txt) {
-    body += `
-      <div style="background:#13151e;border-radius:10px;padding:14px;margin-bottom:14px;
-                  font-size:0.9rem;line-height:1.6">
-        ${msg.m_txt}
-      </div>
-    `;
-  }
-
-  if (msg.question_text) {
-    body += `
-      <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem">
-        ${msg.question_text}
-      </div>
-    `;
-  }
-
   if (msg.distance !== undefined) {
     const locked = msg.distance > (msg.unl_rad || 50);
+
+    if (!locked && msg.m_txt) {
+      body += `
+        <div style="background:#13151e;border-radius:10px;padding:14px;margin-bottom:14px;
+                    font-size:0.9rem;line-height:1.6">
+          ${msg.m_txt}
+        </div>
+      `;
+    }
+
+    if (!locked && msg.question_text) {
+      const answers = msg.answers || ['Yes 👍', 'No 👎'];
+      body += `
+        <div style="font-weight:600;margin-bottom:10px;font-size:0.95rem">
+          ${msg.question_text}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${answers.map(a => `
+            <button style="background:#1e2030;border:1px solid #2d3048;
+                           border-radius:8px;padding:10px;color:white;cursor:pointer">
+              ${a}
+            </button>
+          `).join('')}
+        </div>
+      `;
+    }
+
     body += `
       <div style="background:${locked ? 'rgba(255,77,109,0.1)' : 'rgba(45,228,200,0.1)'};
                   border:1px solid ${locked ? 'rgba(255,77,109,0.3)' : 'rgba(45,228,200,0.3)'};
@@ -476,9 +485,9 @@ function filterMessagesByUniverse(uniId) {
   }
 }
 
-// ═══════════════════════════════════════════════
+// 
 //  LOAD UNIVERSES
-// ═══════════════════════════════════════════════
+// 
 async function loadUniverses() {
   if (!USE_API) {
     allUniverses = getDemoUniverses();
@@ -516,9 +525,9 @@ function fillUniverseDropdowns() {
   }
 }
 
-// ═══════════════════════════════════════════════
+// 
 //  LOAD POIs
-// ═══════════════════════════════════════════════
+// 
 async function loadPOIs() {
   try {
     const res = await fetch(
@@ -536,8 +545,32 @@ async function loadPOIs() {
   }
 }
 
+function toggleLayer(layer) {
+  const btnMessages = document.getElementById('btnMessages');
+  const btnPOIs = document.getElementById('btnPOIs');
+
+  if (layer === 'messages') {
+    if (btnMessages?.classList.contains('active')) {
+      messageMarkers.forEach(m => map.removeLayer(m));
+      messageMarkers = [];
+      btnMessages.classList.remove('active');
+    } else {
+      renderMessageMarkers(allMessages);
+      if (btnMessages) btnMessages.classList.add('active');
+    }
+  } else if (layer === 'pois') {
+    if (btnPOIs?.classList.contains('active')) {
+      poiMarkers.forEach(m => map.removeLayer(m));
+      poiMarkers = [];
+      btnPOIs.classList.remove('active');
+    } else {
+      renderPOIMarkers(allPOIs);
+      if (btnPOIs) btnPOIs.classList.add('active');
+    }
+  }
+}
+
 function renderPOIMarkers(pois) {
-  // Clear old POI markers
   poiMarkers.forEach(m => map.removeLayer(m));
   poiMarkers = [];
 
@@ -546,14 +579,15 @@ function renderPOIMarkers(pois) {
 
     const style = getPOIStyle(poi.poi_category);
 
-  const marker = L.marker([poi.latitude, poi.longitude], {
-  icon: L.divIcon({
-    html: `<div style="font-size:1.4rem">${style.icon}</div>`,
-    className: '',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15]
-  })
-}).addTo(map);
+    const marker = L.marker([poi.latitude, poi.longitude], {
+      icon: L.divIcon({
+        html: `<div style="font-size:1.4rem">${style.icon}</div>`,
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      })
+    }).addTo(map);
+
     marker.bindPopup(`
       <div style="font-family:'DM Sans',sans-serif">
         <div style="font-size:1rem;margin-bottom:4px">${style.icon}</div>
@@ -565,39 +599,9 @@ function renderPOIMarkers(pois) {
     poiMarkers.push(marker);
   });
 }
-
-function toggleLayer(layer) {
-  const btnMessages = document.getElementById('btnMessages');
-  const btnPOIs = document.getElementById('btnPOIs');
-
-  if (layer === 'messages') {
-    if (btnMessages?.classList.contains('active')) {
-      // Hide messages
-      messageMarkers.forEach(m => map.removeLayer(m));
-      messageMarkers = [];
-      btnMessages.classList.remove('active');
-    } else {
-      // Show messages
-      renderMessageMarkers(allMessages);
-      if (btnMessages) btnMessages.classList.add('active');
-    }
-  } else if (layer === 'pois') {
-    if (btnPOIs?.classList.contains('active')) {
-      // Hide POIs
-      poiMarkers.forEach(m => map.removeLayer(m));
-      poiMarkers = [];
-      btnPOIs.classList.remove('active');
-    } else {
-      // Show POIs
-      renderPOIMarkers(allPOIs);
-      if (btnPOIs) btnPOIs.classList.add('active');
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════
+// 
 //  CREATE MESSAGE
-// ═══════════════════════════════════════════════
+//
 function openCreateModal() {
   const modal = document.getElementById('createModal');
   if (modal) modal.classList.remove('hidden');
@@ -733,7 +737,7 @@ function showToast(msg, type = '') {
 }
 
 function typeIcon(type) {
-  return { text: '💬', yesno: '✅', poll: '📊' }[type] || '📍';
+  return { text: '🎁', poll: '🎁' }[type] || '📍';
 }
 
 function typeColor(type) {
@@ -760,9 +764,7 @@ function getPOIStyle(category) {
   return styles[category] || { icon: '📌', color: '#6b7280' };
 }
 
-// ═══════════════════════════════════════════════
-//  DEMO DATA (if API not available)
-// ═══════════════════════════════════════════════
+//  DEMO DATA right now we use static data, but this simulates what an API response would look like
 
 // Demo users with passwords for testing
 const DEMO_USERS = [
@@ -777,11 +779,11 @@ function getDemoMessages() {
     { m_id:1, m_type:'text', latitude:38.7169, longitude:-9.1393,
       m_txt:'Did you know? The Belém Tower was built in the 16th century! 🏰',
       creator_name:'marietranova', uni_name:'LisboaFunfacts', uni_id:2001, distance:142, unl_rad:50 },
-    { m_id:2, m_type:'yesno', latitude:38.7200, longitude:-9.1450,
-      question_text:'Would you recommend this viewpoint? 🌅',
+    { m_id:2, m_type:'poll', latitude:38.7200, longitude:-9.1450, 
+      question_text:'Would you recommend this viewpoint? 🌅',  answers: ['Yes 👍', 'No 👎'], 
       creator_name:'wilmadora', uni_name:'SunsetViewpoints', uni_id:2004, distance:380, unl_rad:30 },
     { m_id:3, m_type:'poll', latitude:38.7140, longitude:-9.1334,
-      question_text:'Best pastel de nata spot?',
+      question_text:'Best pastel de nata spot?', answers: ['Manteigaria', 'Pastéis de Belém', 'Nata Lisboa'],
       creator_name:'bekirbeko', uni_name:'LisboaFunfacts', uni_id:2001, distance:520, unl_rad:40 },
     { m_id:4, m_type:'text', latitude:38.7100, longitude:-9.1480,
       m_txt:'Amazing pastel de nata here! Try it with cinnamon! 🍰',
@@ -835,17 +837,42 @@ function switchView(view) {
 
 // Search universes
 function searchUniverses(query) {
-  const items = document.querySelectorAll('.uni-item-new');
-  items.forEach(item => {
-    const name = item.querySelector('.uni-item-name').textContent.toLowerCase();
-    if (name.includes(query.toLowerCase())) {
-      item.style.display = 'flex';
-    } else {
-      item.style.display = 'none';
-    }
-  });
-}
+  if (!query.trim()) {
+    // empty query - show all
+    renderUniverseListInReceiver();
+    return;
+  }
 
+  //search for all universes that include the query (case-insensitive)
+  const results = allUniverses.filter(u => 
+    u.uni_name.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const list = document.getElementById('universeListReceiver');
+  if (!list) return;
+
+  if (!results.length) {
+    list.innerHTML = '<div class="list-empty">No universes found</div>';
+    return;
+  }
+
+  list.innerHTML = results.map(u => {
+    const isHidden = hiddenUniverses.includes(u.uni_id);
+    return `
+      <div class="uni-item-new" onclick="filterMessagesByUniverse(${u.uni_id})">
+        <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
+        <div class="uni-item-text">
+          <div class="uni-item-name">${u.uni_name}</div>
+          <div class="uni-item-count">${isHidden ? '👋 Left' : u.message_count + ' messages'}</div>
+        </div>
+        ${isHidden
+          ? `<div class="uni-item-delete" onclick="rejoinUniverse(${u.uni_id}, event)" title="Rejoin">➕</div>`
+          : `<div class="uni-item-delete" onclick="deleteUniverse(${u.uni_id}, event)" title="Leave">🗑️</div>`
+        }
+      </div>
+    `;
+  }).join('');
+}
 // Delete universe
 function deleteUniverse(uniId, event) {
   event.stopPropagation(); // Don't trigger click on parent
@@ -859,14 +886,24 @@ function deleteUniverse(uniId, event) {
   showToast('Universe left 👋', 'success'); 
 }
 
+// Rejoin universe
+
+function rejoinUniverse(uniId, event) {
+  event.stopPropagation();
+  hiddenUniverses = hiddenUniverses.filter(id => id !== uniId);
+  renderUniverseListInReceiver();
+  fillUniverseDropdowns();
+  showToast('Universe rejoined! 🌐', 'success');
+}
+
 // Open create universe modal (you can build this later)
 function openCreateUniverseModal() {
   showToast('Create Universe modal - coming soon!');
 }
 
-// ═══════════════════════════════════════════════
+//
 //  SENDER VIEW FUNCTIONS
-// ═══════════════════════════════════════════════
+// 
 
 function setSenderMsgType(type, btn) {
   currentSenderMsgType = type;
@@ -937,14 +974,20 @@ function submitMessageFromSidebar() {
   
   // Create marker on map
 
-  L.circleMarker([senderSelectedLocation.lat, senderSelectedLocation.lng], {
-  radius: 14,
-  fillColor: typeColor(currentSenderMsgType),
-  fillOpacity: 0.85,
-  color: 'white',
-  weight: 2
-}).addTo(map).bindPopup(`...`).openPopup();
-  
+L.marker([senderSelectedLocation.lat, senderSelectedLocation.lng], {
+  icon: L.divIcon({
+    html: `<div style="font-size:1.4rem">${typeIcon(currentSenderMsgType)}</div>`,
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  })
+}).addTo(map).bindPopup(`
+  <div style="font-family:'DM Sans',sans-serif">
+    <div style="font-size:0.9rem;font-weight:600;margin-bottom:6px">${content}</div>
+    <div style="font-size:0.7rem;color:#6b7280">by ${currentUser.username}</div>
+  </div>
+`).openPopup();
+
   // Reset form
   document.getElementById('senderTextContent').value = '';
   document.getElementById('senderQuestionContent').value = '';
@@ -1126,35 +1169,6 @@ async function submitCreateUniverse() {
   closeCreateUniverseModal();
 }
 
-async function deleteUniverse(uniId, event) {
-  event.stopPropagation();
-  
-  if (!confirm('Delete this universe? This cannot be undone.')) {
-    return;
-  }
-  
-  try {
-    // Try API first
-    const res = await fetch(`${API}/universes/${uniId}`, {
-      method: 'DELETE'
-    });
-    
-    if (!res.ok) throw new Error('API error');
-    
-  } catch (err) {
-    console.warn('API not available, deleting locally only');
-  }
-  
-  // Remove from local array
-  allUniverses = allUniverses.filter(u => u.uni_id !== uniId);
-  
-  // Update UI
-  fillUniverseDropdowns();
-  renderUniverseListInReceiver();
-  
-  showToast('Universe deleted', 'success');
-}
-
 // Render universe list in receiver view with delete buttons
 function renderUniverseListInReceiver() {
   const list = document.getElementById('universeListReceiver');
@@ -1202,4 +1216,15 @@ function getUniverseIcon(name) {
   }
   
   return '🌐'; // Default
+}
+
+function addAnswerField() {
+  const list = document.getElementById('answersList');
+  const count = list.querySelectorAll('.answer-option').length + 1;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'field-input-compact answer-option';
+  input.placeholder = `Option ${count}`;
+  input.style.marginBottom = '6px';
+  list.appendChild(input);
 }
