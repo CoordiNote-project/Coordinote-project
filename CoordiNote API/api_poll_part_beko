@@ -1,0 +1,240 @@
+from flask import Flask, request, jsonify
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+app = Flask(__name__)
+
+# ---------------------------------------------------------
+# Database connection helper
+# This function creates and returns a new database connection.
+# ---------------------------------------------------------
+def get_db_connection():
+    return psycopg2.connect(
+        dbname="your_db",
+        user="your_user",
+        password="your_password",
+        host="localhost",
+        port="5432"
+    )
+
+# ---------------------------------------------------------
+# 1. Create Message (Text or Poll)
+# Endpoint: POST /messages
+#
+# If m_type = "text":
+#   - Only inserts into messages table.
+#
+# If m_type = "poll":
+#   - Inserts into messages table.
+#   - Inserts related options into poll_options table.
+#   - Enforces 2–5 option rule.
+# ---------------------------------------------------------
+@app.route("/messages", methods=["POST"])
+def create_message():
+
+    data = request.json
+    m_type = data.get("m_type")
+    m_txt = data.get("text")
+    location_id = data.get("location_id")
+    options = data.get("options", [])
+
+    # Validate message type
+    if m_type not in ["text", "poll"]:
+        return jsonify({"error": "Invalid message type"}), 400
+
+    # Validate poll option count
+    if m_type == "poll":
+        if len(options) < 2 or len(options) > 5:
+            return jsonify({"error": "Poll must have between 2 and 5 options"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Insert message
+        cur.execute("""
+            INSERT INTO messages (location_id, m_type, m_txt)
+            VALUES (%s, %s, %s)
+            RETURNING m_id;
+        """, (location_id, m_type, m_txt))
+
+        message_id = cur.fetchone()[0]
+
+        # If message is a poll, insert options
+        if m_type == "poll":
+            for opt in options:
+                cur.execute("""
+                    INSERT INTO poll_options (message_id, option_text)
+                    VALUES (%s, %s);
+                """, (message_id, opt))
+
+        conn.commit()
+
+        return jsonify({
+            "message": "Message created successfully",
+            "message_id": message_id
+        }), 201
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ---------------------------------------------------------
+# 2. Vote in Poll
+# Endpoint: POST /poll/vote
+#
+# Logic:
+#   - Validate that the option exists.
+#   - Retrieve the related message_id.
+#   - Check whether the user has already voted in this poll.
+#   - If not, insert vote into poll_votes.
+#
+# Assumes a UNIQUE(user_id, message_id) constraint.
+# ---------------------------------------------------------
+@app.route("/poll/vote", methods=["POST"])
+def vote_poll():
+
+    data = request.json
+    option_id = data.get("option_id")
+    user_id = data.get("user_id")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Check that the option exists and retrieve message_id
+        cur.execute("""
+            SELECT message_id
+            FROM poll_options
+            WHERE option_id = %s;
+        """, (option_id,))
+        result = cur.fetchone()
+
+        if not result:
+            return jsonify({"error": "Invalid option"}), 400
+
+        message_id = result[0]
+
+        # Check if user already voted in this poll
+        cur.execute("""
+            SELECT 1
+            FROM poll_votes
+            WHERE user_id = %s AND message_id = %s;
+        """, (user_id, message_id))
+
+        if cur.fetchone():
+            return jsonify({"error": "User has already voted in this poll"}), 400
+
+        # Insert vote
+        cur.execute("""
+            INSERT INTO poll_votes (option_id, user_id, message_id)
+            VALUES (%s, %s, %s);
+        """, (option_id, user_id, message_id))
+
+        conn.commit()
+
+        return jsonify({"message": "Vote recorded successfully"}), 201
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ---------------------------------------------------------
+# 3. Get Poll Results
+# Endpoint: GET /poll/results/<message_id>
+#
+# Returns:
+#   - option_id
+#   - option_text
+#   - vote_count
+#
+# Uses LEFT JOIN to ensure options with zero votes are included.
+# ---------------------------------------------------------
+@app.route("/poll/results/<int:message_id>", methods=["GET"])
+def poll_results(message_id):
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    try:
+        cur.execute("""
+            SELECT 
+                po.option_id,
+                po.option_text,
+                COUNT(pv.vote_id) AS vote_count
+            FROM poll_options po
+            LEFT JOIN poll_votes pv
+                ON po.option_id = pv.option_id
+            WHERE po.message_id = %s
+            GROUP BY po.option_id
+            ORDER BY po.option_id;
+        """, (message_id,))
+
+        results = cur.fetchall()
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ---------------------------------------------------------
+# 4. Get Poll Details
+# Endpoint: GET /poll/<message_id>
+#
+# Returns:
+#   - Poll message text
+#   - Creation date
+#   - All available options
+# ---------------------------------------------------------
+@app.route("/poll/<int:message_id>", methods=["GET"])
+def get_poll(message_id):
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    try:
+        # Retrieve poll message
+        cur.execute("""
+            SELECT m_id, m_txt, created_at
+            FROM messages
+            WHERE m_id = %s AND m_type = 'poll';
+        """, (message_id,))
+        message = cur.fetchone()
+
+        if not message:
+            return jsonify({"error": "Poll not found"}), 404
+
+        # Retrieve options
+        cur.execute("""
+            SELECT option_id, option_text
+            FROM poll_options
+            WHERE message_id = %s;
+        """, (message_id,))
+        options = cur.fetchall()
+
+        message["options"] = options
+
+        return jsonify(message), 200
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
