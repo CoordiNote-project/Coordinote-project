@@ -196,22 +196,122 @@ def login_user():
 # Create universes route
 @app.route("/universes", methods=["GET", "POST"])
 def universes():
+
+    user_id, error = get_current_user()
+    if error:
+        return jsonify({"error": error}), 401
+
     conn = get_db_connection()
     cur = conn.cursor()
 
-    if request.method == "POST":
-        name = request.json.get("name")
-        cur.execute("INSERT INTO universe (uni_id, uni_name) VALUES (DEFAULT, %s) RETURNING uni_id;", (name,))
-        uni_id = cur.fetchone()["uni_id"]
-        conn.commit()
-        release_db_connection(conn)
-        return jsonify({"message": "Universe created", "uni_id": uni_id}), 201
+    try:
+        # CREATE UNIVERSE
+        if request.method == "POST":
+            data = request.get_json(silent=True)
+            if not data:
+                return jsonify({"error": "Invalid JSON"}), 400
 
-    # GET universes
-    cur.execute("SELECT uni_id, uni_name FROM universe;")
-    universes_list = cur.fetchall()
-    release_db_connection(conn)
-    return jsonify(universes_list)
+            name = data.get("name")
+            if not name:
+                return jsonify({"error": "Universe name required"}), 400
+
+            # Create universe
+            cur.execute("""
+                INSERT INTO universe (uni_name)
+                VALUES (%s)
+                RETURNING uni_id;
+            """, (name,))
+            uni_id = cur.fetchone()["uni_id"]
+
+            # Add creator to userUniv
+            cur.execute("""
+                INSERT INTO userUniv (us_id, uni_id)
+                VALUES (%s, %s);
+            """, (user_id, uni_id))
+
+            conn.commit()
+
+            return jsonify({
+                "message": "Universe created",
+                "uni_id": uni_id
+            }), 201
+
+        # GET only universes the user belongs to
+        cur.execute("""
+            SELECT u.uni_id, u.uni_name
+            FROM universe u
+            JOIN userUniv uu ON u.uni_id = uu.uni_id
+            WHERE uu.us_id = %s;
+        """, (user_id,))
+
+        universes_list = cur.fetchall()
+        return jsonify(universes_list)
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        release_db_connection(conn)
+
+# Join universe route
+@app.route("/universes/<int:uni_id>/join", methods=["POST"])
+def join_universe(uni_id):
+
+    user_id, error = get_current_user()
+    if error:
+        return jsonify({"error": error}), 401
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Check universe exists
+        cur.execute("SELECT 1 FROM universe WHERE uni_id = %s;", (uni_id,))
+        if not cur.fetchone():
+            return jsonify({"error": "Universe not found"}), 404
+
+        # Insert membership
+        cur.execute("""
+            INSERT INTO userUniv (us_id, uni_id)
+            VALUES (%s, %s)
+            ON CONFLICT DO NOTHING;
+        """, (user_id, uni_id))
+
+        conn.commit()
+
+        return jsonify({"message": "Joined universe"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        release_db_connection(conn)
+
+# Leave universe route
+@app.route("/universes/<int:uni_id>/leave", methods=["POST"])
+def leave_universe(uni_id):
+
+    user_id, error = get_current_user()
+    if error:
+        return jsonify({"error": error}), 401
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            DELETE FROM userUniv
+            WHERE us_id = %s AND uni_id = %s;
+        """, (user_id, uni_id))
+
+        conn.commit()
+
+        return jsonify({"message": "Left universe"}), 200
+
+    finally:
+        release_db_connection(conn)
 
 # Messages route: POST + GET
 @app.route("/messages", methods=["GET", "POST"])
@@ -237,6 +337,15 @@ def messages():
             return jsonify({"error": "Missing required fields"}), 400
 
         crt_time = datetime.utcnow()
+
+        # Check membership in universe
+        cur.execute("""
+            SELECT 1 FROM userUniv
+            WHERE us_id = %s AND uni_id = %s;
+        """, (user_id, uni_id))
+
+        if not cur.fetchone():
+            return jsonify({"error": "You are not a member of this universe"}), 403
 
         try:
             cur.execute("""
@@ -279,59 +388,20 @@ def messages():
         release_db_connection(conn)
 
 
-# Mark message as seen --> WE NEED TO IMPROVE THIS PART - USER WILL NOT INSERT THE DATA, IT NEEDS TO BE AUTOMATICALLY INSERTED WHEN THE USER OPENS THE MESSAGE, WE CAN USE A NEW ENDPOINT FOR THIS OR WE CAN USE THE SAME ENDPOINT FOR GETTING THE MESSAGES AND MARKING THEM AS SEEN
-#@app.route("/messages/seen", methods=["POST"])
-#def mark_message_seen():
-#    data = request.get_json(silent=True)
-
-#    if not data:
-#        return jsonify({"error": "Invalid or missing JSON"}), 400
-    
-#    m_id = data.get("m_id")
-#    us_id = data.get("us_id")
-
-#    if not m_id or not us_id:
-#        return jsonify({"error": "m_id and us_id required"}), 400
-
-#    conn = get_db_connection()
-#    cur = conn.cursor()
-
-#    try:
-        # insert into seen table
-#        cur.execute("""
-#            INSERT INTO seen (m_id, us_id)
-#            VALUES (%s, %s)
-#            ON CONFLICT (m_id, us_id) DO NOTHING;
-#        """, (m_id, us_id))
-        
-#        conn.commit()
-#        return jsonify({"message": "Message marked as seen"}), 200
-
-#    except Exception as e:
-#        conn.rollback()
-#        return jsonify({"error": str(e)}), 500
-
-#    finally:
-#        release_db_connection(conn)
-
-# Mark message as opened per user
+# Mark message as opened per user (token required)
 @app.route("/messages/<int:m_id>/open", methods=["POST"])
 def open_message(m_id):
-    data = request.get_json(silent=True)
 
-    if not data:
-        return jsonify({"error": "Invalid JSON"}), 400
-
-    user_id = data.get("user_id")
-
-    if not user_id:
-        return jsonify({"error": "user_id required"}), 400
+    # Get user from token
+    user_id, error = get_current_user()
+    if error:
+        return jsonify({"error": error}), 401
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # Get message
+        # GET message
         cur.execute("""
             SELECT m_id, m_txt, view_once
             FROM messages
@@ -342,20 +412,20 @@ def open_message(m_id):
         if not message:
             return jsonify({"error": "Message not found"}), 404
 
-        # If view_once = TRUE
+        # If message is view-once
         if message["view_once"]:
 
+            # Check if already seen
             cur.execute("""
                 SELECT 1 FROM seen
                 WHERE m_id = %s AND us_id = %s
             """, (m_id, user_id))
-
             already_seen = cur.fetchone()
 
             if already_seen:
                 return jsonify({"status": "already viewed"}), 403
 
-            # First time opening → insert
+            # First time opening -> insert into seen
             cur.execute("""
                 INSERT INTO seen (m_id, us_id)
                 VALUES (%s, %s)
