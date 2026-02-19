@@ -212,8 +212,7 @@ def universes():
                 return jsonify({"error": "Invalid JSON"}), 400
 
             name = data.get("name")
-            access = data.get("access", False)  # "public" or "private"
-                # access is boolean: false = public and is default, true = private
+            access = data.get("access", False)  # boolean: false = public and is default, true = private
 
             if not name:
                 return jsonify({"error": "Universe name required"}), 400
@@ -226,12 +225,13 @@ def universes():
             """, (name, access))
             uni_id = cur.fetchone()["uni_id"]
 
-            # Add creator to userUniv
+            # Add creator to user_univ
             cur.execute("""
-                INSERT INTO userUniv (us_id, uni_id)
+                INSERT INTO user_univ (us_id, uni_id)
                 VALUES (%s, %s);
+                ON CONFLICT DO NOTHING;
             """, (us_id, uni_id))
-
+            
             conn.commit()
 
             return jsonify({
@@ -241,11 +241,14 @@ def universes():
 
         # GET only universes the user belongs to
         cur.execute("""
-            SELECT u.uni_id, u.uni_name
-            FROM universe u
-            JOIN userUniv uu ON u.uni_id = uu.uni_id
-            WHERE uu.us_id = %s;
-        """, (us_id,))
+            SELECT m.m_id, m.m_type, m.unl_rad, m.crt_time,
+                m.view_once, m.m_txt, m.creator,
+                m.uni_id, m.q_multi, m.location_id
+            FROM messages m
+            JOIN user_univ uu ON m.uni_id = uu.uni_id
+            WHERE m.uni_id = %s
+            AND uu.us_id = %s
+        """, (uni_id, us_id))
 
         universes_list = cur.fetchall()
         return jsonify(universes_list)
@@ -274,9 +277,9 @@ def join_universe(uni_id):
         if not cur.fetchone():
             return jsonify({"error": "Universe not found"}), 404
 
-        # Insert membership
+        # Insert membership = add user to universe. If already a member, do nothing
         cur.execute("""
-            INSERT INTO userUniv (us_id, uni_id)
+            INSERT INTO user_univ (us_id, uni_id)
             VALUES (%s, %s)
             ON CONFLICT DO NOTHING;
         """, (us_id, uni_id))
@@ -305,7 +308,7 @@ def leave_universe(uni_id):
 
     try:
         cur.execute("""
-            DELETE FROM userUniv
+            DELETE FROM user_univ
             WHERE us_id = %s AND uni_id = %s;
         """, (us_id, uni_id))
 
@@ -331,6 +334,7 @@ def messages():
         data = request.get_json(silent=True)
         if not data:
             return jsonify({"error": "Invalid or missing JSON"}), 400
+        
         m_type = data.get("m_type")  # "text" or "poll"
         unl_rad = data.get("unl_rad")
         view_once = data.get("view_once")  # true/false
@@ -347,7 +351,7 @@ def messages():
 
         # Check membership in universe
         cur.execute("""
-            SELECT 1 FROM userUniv
+            SELECT 1 FROM user_univ
             WHERE us_id = %s AND uni_id = %s;
         """, (us_id, uni_id))
 
@@ -357,7 +361,7 @@ def messages():
         try:
             cur.execute("""
                 INSERT INTO messages (
-                    m_type, unl_rad, crt_time, view_once, m_txt, us_id, uni_id, q_multi, location_id
+                    m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
                 ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING m_id;
             """, (m_type, unl_rad, crt_time, view_once, m_txt, us_id, uni_id, q_multi, location_id))
@@ -385,7 +389,7 @@ def messages():
         cur.execute("""
             SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, q_multi, location_id
             FROM messages m
-            JOIN userUniv uu ON m.uni_id = uu.uni_id
+            JOIN user_univ uu ON m.uni_id = uu.uni_id
             WHERE m.uni_id = %s
             AND uu.us_id = %s
         """, (uni_id, us_id))
@@ -412,7 +416,7 @@ def open_message(m_id):
     try:
         # GET message
         cur.execute("""
-            SELECT m_id, m_txt, view_once
+            SELECT m_id, m_txt, view_once, uni_id
             FROM messages
             WHERE m_id = %s
         """, (m_id,))
@@ -420,6 +424,15 @@ def open_message(m_id):
 
         if not message:
             return jsonify({"error": "Message not found"}), 404
+
+        # Check user is member of the universe
+        cur.execute("""
+            SELECT 1 FROM user_univ
+            WHERE us_id = %s AND uni_id = %s
+        """, (us_id, message["uni_id"]))
+
+        if not cur.fetchone():
+            return jsonify({"error": "Not allowed"}), 403
 
         # If message is view-once
         if message["view_once"]:
