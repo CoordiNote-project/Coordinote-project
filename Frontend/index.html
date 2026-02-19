@@ -301,6 +301,43 @@ function showMain() {
   </div>
 </div>
 
+<!-- MODAL – Create Universe -->
+<div id="createUniverseModal" class="modal-backdrop hidden">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>🌐 Create Universe</h2>
+      <button class="modal-close" onclick="closeCreateUniverseModal()">✕</button>
+    </div>
+    <div class="modal-form">
+      <label class="field-label">Universe Name</label>
+      <input type="text" id="newUniverseName" class="field-input" 
+             placeholder="e.g. LisbonFoodie" maxlength="50"/>
+      
+      <label class="field-label" style="margin-top:12px">Description</label>
+      <textarea id="newUniverseDesc" class="field-input field-ta" rows="3"
+                placeholder="What is this universe about?"></textarea>
+      
+      <label class="field-label" style="margin-top:12px">Privacy</label>
+      <div class="type-tabs" style="margin-bottom:0">
+        <button class="type-tab active" id="universePublic" 
+                onclick="setUniversePrivacy(true, this)">
+          <span>🌍</span><span>Public</span>
+        </button>
+        <button class="type-tab" id="universePrivate" 
+                onclick="setUniversePrivacy(false, this)">
+          <span>🔒</span><span>Private</span>
+        </button>
+      </div>
+      
+      <div class="login-error hidden" id="universeError">❌ Error</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeCreateUniverseModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitCreateUniverse()">Create Universe 🌐</button>
+    </div>
+  </div>
+</div>
+
   <!-- Toast notification -->
   <div class="toast hidden" id="toast"></div>
 

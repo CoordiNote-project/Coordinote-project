@@ -18,6 +18,7 @@ let currentMsgType = 'text';
 let allUniverses = [];
 let allPOIs = [];
 let isRegisterMode = false;  
+let hiddenUniverses = []; // universes the user has "left"
 
 // 
 //  START APP (when page loads)
@@ -487,14 +488,15 @@ async function loadUniverses() {
     
     console.log('✓ Loaded', allUniverses.length, 'universes');
     fillUniverseDropdowns();
+    renderUniverseListInReceiver(); // ← ADD THIS LINE
 
   } catch (err) {
     console.warn('Universe API not reachable');
     allUniverses = getDemoUniverses();
     fillUniverseDropdowns();
+    renderUniverseListInReceiver(); // ← AND THIS LINE
   }
 }
-
 function fillUniverseDropdowns() {
   // Sidebar dropdown
   const dropdown1 = document.getElementById('universeDropdown');
@@ -857,13 +859,14 @@ function searchUniverses(query) {
 // Delete universe
 function deleteUniverse(uniId, event) {
   event.stopPropagation(); // Don't trigger click on parent
-  if (confirm('Delete this universe?')) {
+
     // Remove from list
-    const item = event.target.closest('.uni-item-new');
-    if (item) item.remove();
-    showToast('Universe deleted', 'success');
-    // TODO: Call API to actually delete
-  }
+    hiddenUniverses.push(uniId);
+
+     renderUniverseListInReceiver();
+  fillUniverseDropdowns();
+
+  showToast('Universe left 👋', 'success'); 
 }
 
 // Open create universe modal (you can build this later)
@@ -1024,7 +1027,7 @@ function openCreateUniverseModal() {
 function closeCreateUniverseModal() {
   const modal = document.getElementById('createUniverseModal');
   if (modal) modal.classList.add('hidden');
-  
+
   // Reset form
   const nameInput = document.getElementById('newUniverseName');
   const descInput = document.getElementById('newUniverseDesc');
@@ -1038,6 +1041,20 @@ function closeCreateUniverseModal() {
   newUniversePublic = true;
   document.getElementById('universePublic')?.classList.add('active');
   document.getElementById('universePrivate')?.classList.remove('active');
+}
+
+// if use clicks outside modal content, close modal
+
+function closeModalOnBg(event) {
+  if (event.target.classList.contains('modal-backdrop')) {
+    const clickedModal = event.target;
+    
+    if (clickedModal.id === 'createUniverseModal') {
+      closeCreateUniverseModal();
+    } else if (clickedModal.id === 'createModal') {
+      closeCreateModal();
+    }
+}
 }
 
 function setUniversePrivacy(isPublic, btn) {
@@ -1163,6 +1180,9 @@ function renderUniverseListInReceiver() {
   const list = document.getElementById('universeListReceiver');
   if (!list) return;
   
+  // to make delete work without API, we keep track of "hidden" universes in an array-- just for demo purposes
+    const visible = allUniverses.filter(u => !hiddenUniverses.includes(u.uni_id));
+
   if (!allUniverses.length) {
     list.innerHTML = '<div class="list-empty">No universes found</div>';
     return;
