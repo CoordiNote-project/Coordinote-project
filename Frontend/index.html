@@ -1,3 +1,5 @@
+<title>CoordiNote  </title>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,8 +23,7 @@ function showMain() {
 </script>
 
 <body>
-
- <div id="app">
+<div id="app">
 
   <!-- building the Sidebar -->
 <!-- NEW SIDEBAR WITH TWO VIEWS -->
@@ -72,18 +73,13 @@ function showMain() {
       <div class="uni-skeleton"></div>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-box">
-      <div class="stat">
-        <span class="stat-val" id="statMessages">—</span>
-        <span class="stat-lbl">messages</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat">
-        <span class="stat-val" id="statPOIs">—</span>
-        <span class="stat-lbl">POIs</span>
-      </div>
-    </div>
+     <!-- Delete Universe - leave Universe -->
+   <button class="btn-icon-small danger"
+          id="btnDeleteUniverse"
+          onclick="deleteSelectedUniverse()"
+          title="Delete Universe">
+    🗑️
+  </button>
 
   </div>
 
@@ -274,28 +270,73 @@ function showMain() {
 
   </div> <!-- end of app -->
 
-  <!-- MODAL – Login -->
-  <div class="modal-backdrop" id="loginModal">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <div class="login-logo">
-          <div class="logo-icon">📍</div>
-          <span class="logo-text">Coordi<em>Note</em></span>
-        </div>
-      </div>
-      <div class="modal-form">
-        <label class="field-label">Username</label>
-        <input type="text" id="loginUser" class="field-input" placeholder="e.g. wilmakahl" />
-        <label class="field-label" style="margin-top:12px">Password</label>
-        <input type="password" id="loginPass" class="field-input" placeholder="••••••••" />
-        <div class="login-error hidden" id="loginError">❌ Wrong credentials</div>
-      </div>
-      <div class="modal-footer" style="flex-direction:column;gap:8px;">
-        <button class="btn-submit" id="loginBtn">Login</button>
-        <button class="btn-cancel" id="registerBtn">Register new account</button>
+<!-- MODAL – Login -->
+<div class="modal-backdrop" id="loginModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="login-logo">
+        <div class="logo-icon">📍</div>
+        <span class="logo-text">Coordi<em>Note</em></span>
       </div>
     </div>
+    <div class="modal-form">
+      <label class="field-label">Username</label>
+      <input type="text" id="loginUser" class="field-input" placeholder="e.g. wilmakahl" />
+      
+      <label class="field-label" style="margin-top:12px">Password</label>
+      <input type="password" id="loginPass" class="field-input" placeholder="••••••••" />
+      
+      <!-- Confirm Password (hidden by default) -->
+      <div id="confirmPasswordField" class="hidden">
+        <label class="field-label" style="margin-top:12px">Confirm Password</label>
+        <input type="password" id="loginPassConfirm" class="field-input" placeholder="••••••••" />
+      </div>
+      
+      <div class="login-error hidden" id="loginError">❌ Wrong credentials</div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;gap:8px;">
+      <button class="btn-submit" id="loginBtn">Login</button>
+      <button class="btn-cancel" id="registerBtn">Register new account</button>
+    </div>
   </div>
+</div>
+
+<!-- MODAL – Create Universe -->
+<div id="createUniverseModal" class="modal-backdrop hidden">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>🌐 Create Universe</h2>
+      <button class="modal-close" onclick="closeCreateUniverseModal()">✕</button>
+    </div>
+    <div class="modal-form">
+      <label class="field-label">Universe Name</label>
+      <input type="text" id="newUniverseName" class="field-input" 
+             placeholder="e.g. LisbonFoodie" maxlength="50"/>
+      
+      <label class="field-label" style="margin-top:12px">Description</label>
+      <textarea id="newUniverseDesc" class="field-input field-ta" rows="3"
+                placeholder="What is this universe about?"></textarea>
+      
+      <label class="field-label" style="margin-top:12px">Privacy</label>
+      <div class="type-tabs" style="margin-bottom:0">
+        <button class="type-tab active" id="universePublic" 
+                onclick="setUniversePrivacy(true, this)">
+          <span>🌍</span><span>Public</span>
+        </button>
+        <button class="type-tab" id="universePrivate" 
+                onclick="setUniversePrivacy(false, this)">
+          <span>🔒</span><span>Private</span>
+        </button>
+      </div>
+      
+      <div class="login-error hidden" id="universeError">❌ Error</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeCreateUniverseModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitCreateUniverse()">Create Universe 🌐</button>
+    </div>
+  </div>
+</div>
 
   <!-- Toast notification -->
   <div class="toast hidden" id="toast"></div>
