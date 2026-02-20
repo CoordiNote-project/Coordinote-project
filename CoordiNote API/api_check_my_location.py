@@ -10,7 +10,7 @@ import json
 # DATABASE CONFIGURATION
 
 DB_CONFIG = {
-    "database": "coordinota_share", 
+    "database": "coordinote_share", 
     "user": "postgres",
     "password": "postgres",      
     "host": "localhost",
