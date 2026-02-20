@@ -6,6 +6,7 @@ from flask import (
 import psycopg2 # PostgreSQL adapter for Python
 from psycopg2.extras import RealDictCursor # This allows us to get query results as dictionaries instead of tuples
 from psycopg2.pool import SimpleConnectionPool # This allows us to create a pool of database connections that can be reused, improving performance
+from psycopg2 import errors # This module contains exceptions that can be raised by psycopg2, we're using it to handle duplicates uni_name error 
 from passlib.hash import bcrypt # This is a library for hashing passwords securely, we will use it to hash user passwords before storing them in the database
 # from utils import format_geojson
 import uuid # for generating unique identifiers, we will use it to generate unique IDs for users and notes
@@ -232,17 +233,34 @@ def universes():
 
             name = data.get("name")
             access = data.get("access", False)  # boolean: false = public and is default, true = private
+            descri = data.get("descri")  # can be None
 
             if not name:
-                return jsonify({"error": "Universe name required"}), 400
+                return jsonify({"error": "Insert universe name"}), 400
 
-            # Insert universe and get uni_id
-            cur.execute("""
-                INSERT INTO universes (uni_name, access)
-                VALUES (%s, %s)
-                RETURNING uni_id;
-            """, (name, access))
-            uni_id = cur.fetchone()["uni_id"]
+            # Insert universe and get uni_id + check the uni_name is not already taken
+            try:
+                cur.execute("""
+                    INSERT INTO universes (uni_name, access, descri)
+                    VALUES (%s, %s, %s)
+                    RETURNING uni_id;
+                """, (name, access, descri))
+
+                conn.commit()
+
+                return jsonify({
+                    "message": "Universe created"
+                }), 201
+
+            except psycopg2.errors.UniqueViolation:
+                conn.rollback()
+                return jsonify({
+                    "error": "Universe name already exists. Be more original."
+                }), 400
+
+            except Exception as e:
+                conn.rollback()
+                return jsonify({"error": str(e)}), 500
 
             # Add creator to user_univ
             cur.execute("""
