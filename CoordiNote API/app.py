@@ -15,7 +15,7 @@ from utils import format_geojson
 # Database configuration
 
 DB_CONFIG = {
-    "database": "coordinote_db", # The name of the database we will connect to (specific for me, Marie - we need to update this)
+    "database": "coordinote_share", # The name of the database we will connect to (specific for me, Marie - we need to update this)
     "user": "postgres",
     "password": "postgres",
     "host": "localhost",
