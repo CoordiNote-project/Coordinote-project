@@ -1589,3 +1589,27 @@ body {
 .toggle-switch input:checked + .toggle-slider:before {
   transform: translateX(18px);
 }
+
+.sidebar {
+  /* bestehende styles bleiben, nur width ändern: */
+  width: var(--sidebar-width, 320px);
+  min-width: 200px;
+  max-width: 500px;
+  position: relative;
+}
+
+.sidebar-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  background: transparent;
+  z-index: 100;
+  transition: background 0.2s;
+}
+
+.sidebar-resizer:hover {
+  background: rgba(45, 228, 200, 0.3);
+}
