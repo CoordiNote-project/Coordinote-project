@@ -6,6 +6,7 @@ from flask import (
 import psycopg2 # PostgreSQL adapter for Python
 from psycopg2.extras import RealDictCursor # This allows us to get query results as dictionaries instead of tuples
 from psycopg2.pool import SimpleConnectionPool # This allows us to create a pool of database connections that can be reused, improving performance
+from psycopg2 import errors # This module contains exceptions that can be raised by psycopg2, we're using it to handle duplicates uni_name error 
 from passlib.hash import bcrypt # This is a library for hashing passwords securely, we will use it to hash user passwords before storing them in the database
 # from utils import format_geojson
 import uuid # for generating unique identifiers, we will use it to generate unique IDs for users and notes
@@ -193,6 +194,25 @@ def login_user():
     else:
         return jsonify({"error": "Username and password do not match. Try again."}), 401
 
+# show all public universes route
+@app.route("/universes/public", methods=["GET"])
+def public_universes():
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            SELECT uni_name, descri
+            FROM universes
+            WHERE access = false;
+        """)
+        universes = cur.fetchall()
+        return jsonify(universes)
+
+    finally:
+        release_db_connection(conn)
+
 # Create universes route
 @app.route("/universes", methods=["GET", "POST"])
 def universes():
@@ -213,17 +233,34 @@ def universes():
 
             name = data.get("name")
             access = data.get("access", False)  # boolean: false = public and is default, true = private
+            descri = data.get("descri")  # can be None
 
             if not name:
-                return jsonify({"error": "Universe name required"}), 400
+                return jsonify({"error": "Insert universe name"}), 400
 
-            # Insert universe and get uni_id
-            cur.execute("""
-                INSERT INTO universes (uni_name, access)
-                VALUES (%s, %s)
-                RETURNING uni_id;
-            """, (name, access))
-            uni_id = cur.fetchone()["uni_id"]
+            # Insert universe and get uni_id + check the uni_name is not already taken
+            try:
+                cur.execute("""
+                    INSERT INTO universes (uni_name, access, descri)
+                    VALUES (%s, %s, %s)
+                    RETURNING uni_id;
+                """, (name, access, descri))
+
+                conn.commit()
+
+                return jsonify({
+                    "message": "Universe created"
+                }), 201
+
+            except psycopg2.errors.UniqueViolation:
+                conn.rollback()
+                return jsonify({
+                    "error": "Universe name already exists. Be more original."
+                }), 400
+
+            except Exception as e:
+                conn.rollback()
+                return jsonify({"error": str(e)}), 500
 
             # Add creator to user_univ
             cur.execute("""
@@ -241,7 +278,7 @@ def universes():
 
         # GET only universes the user belongs to
         cur.execute("""
-            SELECT u.uni_id, u.uni_name, u.access
+            SELECT u.uni_name, u.access, u.descri
             FROM universes u
             JOIN user_univ uu ON u.uni_id = uu.uni_id
             WHERE uu.us_id = %s;
@@ -249,20 +286,7 @@ def universes():
 
         universes_list = cur.fetchall()
         return jsonify(universes_list)
-
-        cur.execute("""
-            SELECT m.m_id, m.m_type, m.unl_rad, m.crt_time,
-                m.view_once, m.m_txt, m.creator,
-                m.uni_id, m.poll, m.location_id
-            FROM messages m
-            JOIN user_univ uu ON m.uni_id = uu.uni_id
-            WHERE m.uni_id = %s
-            AND uu.us_id = %s
-        """, (uni_id, us_id))
-
-        universes_list = cur.fetchall()
-        return jsonify(universes_list)
-
+        
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
@@ -271,32 +295,47 @@ def universes():
         release_db_connection(conn)
 
 # Join universe route
-@app.route("/universes/<int:uni_id>/join", methods=["POST"])
-def join_universe(uni_id):
+@app.route("/universes/join", methods=["POST"])
+def join_universe():
 
     us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
 
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    uni_name = data.get("uni_name")
+    if not uni_name:
+        return jsonify({"error": "uni_name required"}), 400
+
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # Check universe exists
-        cur.execute("SELECT 1 FROM universes WHERE uni_id = %s;", (uni_id,))
-        if not cur.fetchone():
+        # does the universe exist?
+        cur.execute("""
+            SELECT uni_id FROM universes
+            WHERE uni_name = %s;
+        """, (uni_name,))
+        universe = cur.fetchone()
+
+        if not universe:
             return jsonify({"error": "Universe not found"}), 404
 
-        # Insert membership = add user to universe. If already a member, do nothing
+        uni_id = universe["uni_id"]
+
+        # Insert membership
         cur.execute("""
             INSERT INTO user_univ (us_id, uni_id)
             VALUES (%s, %s)
             ON CONFLICT DO NOTHING;
         """, (us_id, uni_id))
-
+       
         conn.commit()
 
-        return jsonify({"message": "Joined universe"}), 200
+        return jsonify({"message": f"Joined {uni_name}"}), 200
 
     except Exception as e:
         conn.rollback()
@@ -306,17 +345,36 @@ def join_universe(uni_id):
         release_db_connection(conn)
 
 # Leave universe route
-@app.route("/universes/<int:uni_id>/leave", methods=["POST"])
-def leave_universe(uni_id):
+@app.route("/universes/leave", methods=["POST"])
+def leave_universe():
 
     us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
 
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    uni_name = data.get("uni_name")
+    if not uni_name:
+        return jsonify({"error": "uni_name required"}), 400
+
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
+        cur.execute("""
+            SELECT uni_id FROM universes
+            WHERE uni_name = %s;
+        """, (uni_name,))
+        universe = cur.fetchone()
+
+        if not universe:
+            return jsonify({"error": "Universe not found"}), 404
+
+        uni_id = universe["uni_id"]
+
         cur.execute("""
             DELETE FROM user_univ
             WHERE us_id = %s AND uni_id = %s;
@@ -324,7 +382,7 @@ def leave_universe(uni_id):
 
         conn.commit()
 
-        return jsonify({"message": "Left universe"}), 200
+        return jsonify({"message": f"Left {uni_name}"}), 200
 
     finally:
         release_db_connection(conn)

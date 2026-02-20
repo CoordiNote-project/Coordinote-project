@@ -8,10 +8,9 @@ from geoalchemy2 import Geometry
 
 # -------------------------------------------------------
 # CONFIGURATION
-# -------------------------------------------------------
 
 DB_USER = "postgres"      
-DB_PASSWORD = "postgres"  # Remember to update your PostgreSQL password here
+DB_PASSWORD = "postgres"  
 DB_HOST = "localhost"
 DB_PORT = "5432"
 DB_NAME = "coordinote_share"
@@ -28,7 +27,7 @@ TARGETS = {
 
 # -------------------------------------------------------
 # EXTRACT + TRANSFORM 
-# -------------------------------------------------------
+
 
 def fetch_osm_data(category, target_query):
     print(f"\nFetching '{category}' locations via OpenStreetMap...")
