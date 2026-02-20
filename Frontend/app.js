@@ -500,7 +500,8 @@ async function deleteMessage(msgId) {
   } catch (err) {
     console.warn('API not available, deleting locally');
   }
-    if (messageCircles[msgId]) {
+
+  if (messageCircles[msgId]) {
     map.removeLayer(messageCircles[msgId]);
     delete messageCircles[msgId];
   }
@@ -531,13 +532,36 @@ async function loadUniverses() {
     renderUniverseListInReceiver();
     return;
   }// here API call later
+
+    try {
+    const res = await fetch(`${API}/universes?user_id=${currentUser.id}`);
+    const data = await res.json();
+    allUniverses = data.universes || [];
+    fillUniverseDropdowns();
+    renderUniverseListInReceiver();
+  } catch (err) {
+    console.warn('API not reachable, using demo data');
+    allUniverses = getDemoUniverses();
+    fillUniverseDropdowns();
+    renderUniverseListInReceiver();
   }
+}
+
 function fillUniverseDropdowns() {
   // Sidebar dropdown
   const dropdown1 = document.getElementById('universeDropdown');
   if (dropdown1) {
     dropdown1.innerHTML = '<option value="all">All Universes</option>' +
       allUniverses.map(u => `<option value="${u.uni_id}">${u.uni_name}</option>`).join('');
+  }
+
+  // Sender modal dropdown (only universes the user hasn't left)
+    const dropdown3 = document.getElementById('senderUniverseSelect');
+  if (dropdown3) {
+    dropdown3.innerHTML = allUniverses
+      .filter(u => !hiddenUniverses.includes(u.uni_id))
+      .map(u => `<option value="${u.uni_id}">${getUniverseIcon(u.uni_name)} ${u.uni_name}</option>`)
+      .join('');
   }
 
   // Modal dropdown
@@ -1007,40 +1031,67 @@ function submitMessageFromSidebar() {
       return;
     }
   }
-  
-  // Create marker on map
 
-L.marker([senderSelectedLocation.lat, senderSelectedLocation.lng], {
-  icon: L.divIcon({
-    html: `<div style="font-size:1.4rem">${typeIcon(currentSenderMsgType)}</div>`,
-    className: '',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15]
-  })
-}).addTo(map).bindPopup(`
-  <div style="font-family:'DM Sans',sans-serif">
-    <div style="font-size:0.9rem;font-weight:600;margin-bottom:6px">${content}</div>
-    <div style="font-size:0.7rem;color:#6b7280">by ${currentUser.username}</div>
-  </div>
-`).openPopup();
+  // 1. creating message object
 
-// Buffer circle für unlock radius
-const circle = L.circle([senderSelectedLocation.lat, senderSelectedLocation.lng], {
-  radius: radius,  // in meters
-  fillColor: '#2de4c8',
-  fillOpacity: 0.1,
-  color: '#2de4c8',
-  weight: 1,
-  dashArray: '5, 5'
-}).addTo(map);
+  const viewOnce = document.getElementById('viewOnceToggle').checked;
+  const newMsg = {
+    m_id: Date.now(),
+    m_type: currentSenderMsgType,
+    latitude: senderSelectedLocation.lat,
+    longitude: senderSelectedLocation.lng,
+    creator_name: currentUser.username,
+    uni_name: allUniverses.find(u => u.uni_id == universeId)?.uni_name || 'Unknown',
+    uni_id: universeId,
+    distance: 0,
+    unl_rad: radius,
+    view_once: viewOnce 
+  };
 
-  // Reset form
+  // 2. creating marker
+  const marker = L.marker([senderSelectedLocation.lat, senderSelectedLocation.lng], {
+    icon: L.divIcon({
+      html: `<div style="font-size:1.4rem">${typeIcon(currentSenderMsgType)}</div>`,
+      className: '',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    })
+  }).addTo(map).bindPopup(`
+    <div style="font-family:'DM Sans',sans-serif">
+      <div style="font-size:0.9rem;font-weight:600;margin-bottom:6px">${content}</div>
+      <div style="font-size:0.7rem;color:#6b7280">by ${currentUser.username}</div>
+    </div>
+  `).openPopup();
+
+  marker.on('click', () => {
+    marker.openPopup();
+    showMessageDetail(newMsg);
+  });
+  messageMarkers.push(marker);
+
+  // 3. Buffer circle for unlock radius
+  const circle = L.circle([senderSelectedLocation.lat, senderSelectedLocation.lng], {
+    radius: radius,
+    fillColor: '#8f2de4',
+    fillOpacity: 0.1,
+    color: '#8f2de4',
+    weight: 1,
+    dashArray: '5, 5'
+  }).addTo(map);
+
+  // 4. saf
+  messageCircles[newMsg.m_id] = circle;
+  allMessages.push(newMsg);
+  updateStats();
+
+  // 5. Reset form
   document.getElementById('senderTextContent').value = '';
   document.getElementById('senderQuestionContent').value = '';
   senderSelectedLocation = null;
   updateLocationDisplay(null);
-  
   if (window.tempMarker) map.removeLayer(window.tempMarker);
+
+  showToast('Message dropped! 📍', 'success');
 }
 
 function updateLocationDisplay(location) {
@@ -1123,7 +1174,9 @@ function closeModalOnBg(event) {
     } else if (clickedModal.id === 'createModal') {
       closeCreateModal();
     }
-}
+    } else if (clickedModal.id === 'discoverModal') {  
+      closeDiscoverModal();
+    }
 }
 
 function setUniversePrivacy(isPublic, btn) {
@@ -1296,4 +1349,55 @@ function updateRemoveButtons() {
     const btn = wrapper.querySelector('button');
     if (btn) btn.style.display = wrappers.length <= 2 ? 'none' : 'block';
   });
+}
+
+function openAboutModal() {
+  document.getElementById('aboutModal').classList.remove('hidden');
+}
+
+function closeAboutModal() {
+  document.getElementById('aboutModal').classList.add('hidden');
+  if (clickedModal.id === 'createUniverseModal') {
+  closeCreateUniverseModal();
+} else if (clickedModal.id === 'createModal') {
+  closeCreateModal();
+} else if (clickedModal.id === 'aboutModal') {  
+  closeAboutModal();
+}
+}
+
+function openDiscoverModal() {
+  const list = document.getElementById('discoverList');
+  
+  // Alle public universes die ich noch nicht habe
+  const publicUniverses = allUniverses.filter(u => 
+    u.pub_priv === true && !hiddenUniverses.includes(u.uni_id)
+  );
+
+  list.innerHTML = publicUniverses.map(u => `
+    <div class="uni-item-new">
+      <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
+      <div class="uni-item-text">
+        <div class="uni-item-name">${u.uni_name}</div>
+        <div class="uni-item-count">${u.message_count || 0} messages · ${u.member_count || 0} members</div>
+      </div>
+      <div class="uni-item-delete" onclick="joinUniverse(${u.uni_id})" 
+           title="Join" style="color:#2de4c8">➕</div>
+    </div>
+  `).join('') || '<div class="list-empty">No public universes found</div>';
+
+  document.getElementById('discoverModal').classList.remove('hidden');
+}
+
+function closeDiscoverModal() {
+  document.getElementById('discoverModal').classList.add('hidden');
+}
+
+function joinUniverse(uniId) {
+  // Wenn vorher verlassen, wieder hinzufügen
+  hiddenUniverses = hiddenUniverses.filter(id => id !== uniId);
+  renderUniverseListInReceiver();
+  fillUniverseDropdowns();
+  closeDiscoverModal();
+  showToast('Universe joined! 🌍', 'success');
 }

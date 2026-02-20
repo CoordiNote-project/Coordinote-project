@@ -22,6 +22,20 @@ function showMain() {
 }
 </script>
 
+<!-- discover universes -->
+<div id="discoverModal" class="modal-backdrop hidden" onclick="closeModalOnBg(event)">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>🌍 Discover Universes</h2>
+      <button class="modal-close" onclick="closeDiscoverModal()">✕</button>
+    </div>
+    <div class="modal-form">
+      <div id="discoverList"></div>
+    </div>
+  </div>
+</div>
+
+
 <body>
 <div id="app">
 
@@ -55,14 +69,19 @@ function showMain() {
   <div class="sidebar-view active" id="viewReceiver">
     
     <!-- Search & Create Universes -->
+
     <div class="action-row">
-      <input type="text" id="searchUniverse" class="search-input-small" 
-             placeholder="🔍 Search universes..." oninput="searchUniverses(this.value)"/>
-      <button class="btn-icon-small" id="btnCreateUniverse" 
-              onclick="openCreateUniverseModal()" title="Create Universe">
-        ➕
-      </button>
-    </div>
+  <input type="text" id="searchUniverse" class="search-input-small" 
+         placeholder="🔍 Search universes..." oninput="searchUniverses(this.value)"/>
+  <button class="btn-icon-small" id="btnCreateUniverse" 
+          onclick="openCreateUniverseModal()" title="Create Universe">
+    ➕
+  </button>
+  <!-- ← NEU -->
+  <button class="btn-icon-small" onclick="openDiscoverModal()" title="Discover Universes">
+    🌍
+  </button>
+</div>
 
     <!-- Universe List -->
     <div class="section-title">My Universes</div>
@@ -179,7 +198,32 @@ function showMain() {
       Drop Message 📍
     </button>
 
-  </div>
+<!-- Unlock Radius -->
+    <div class="form-group-compact">
+      <label class="field-label-small">
+        Unlock Radius: <strong id="senderRadiusLabel">50m</strong>
+      </label>
+      <input type="range" id="senderRadiusSlider" min="20" max="500" value="50" 
+             class="slider" oninput="updateSenderRadius(this.value)"/>
+    </div>
+
+    <!-- View Once Toggle -->
+ <div class="form-group-compact" style="display:flex;align-items:center;justify-content:space-between">
+  <label class="field-label-small" style="margin:0">
+    👁️ View Once
+    <div style="font-size:0.7rem;color:#6b7280;font-weight:400">Disappears after first read</div>
+  </label>
+  <label class="toggle-switch">
+    <input type="checkbox" id="viewOnceToggle">
+    <span class="toggle-slider"></span>
+  </label>
+</div>
+    <!-- Submit Button -->
+    <button class="btn-submit-sidebar" onclick="submitMessageFromSidebar()">
+      Drop Message 📍
+    </button>
+
+  </div>  
 
   <!-- ═══ USER ROW (always at bottom) ═══ -->
   <div class="user-row">
@@ -197,6 +241,15 @@ function showMain() {
   <div class="map-wrap">
     <div id="map"></div>
 
+    <!-- info button -->
+<button onclick="openAboutModal()" 
+        style="position:absolute;bottom:24px;right:24px;z-index:1000;
+               background:#1e2030;border:1px solid #2d3048;border-radius:50%;
+               width:40px;height:40px;color:white;font-size:1.1rem;
+               cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+  ℹ️
+
+</button>
     <!-- Top controls -->
     <div class="map-toolbar">
       <button class="tool-btn active" id="btnMessages" title="Show Messages">🎁</button>
@@ -355,6 +408,7 @@ function showMain() {
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
+
 </body>
 
 </html>
