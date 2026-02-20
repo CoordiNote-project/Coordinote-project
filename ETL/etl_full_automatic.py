@@ -6,15 +6,12 @@ from shapely.geometry import Point
 from sqlalchemy import create_engine, text
 from geoalchemy2 import Geometry
 
-# -------------------------------------------------------
 # CONFIGURATION
-# -------------------------------------------------------
-
 DB_USER = "postgres"      
-DB_PASSWORD = "postgres"  # Remember to update your PostgreSQL password here
+DB_PASSWORD = "postgres"
 DB_HOST = "localhost"
 DB_PORT = "5432"
-DB_NAME = "coordinote_share"
+DB_NAME = "coordinote_db"
 TABLE_NAME = "locations"
 
 TRUNCATE_BEFORE_LOAD = True
@@ -26,10 +23,7 @@ TARGETS = {
     "bus_stop": 'node["highway"="bus_stop"](area.searchArea);'
 }
 
-# -------------------------------------------------------
 # EXTRACT + TRANSFORM 
-# -------------------------------------------------------
-
 def fetch_osm_data(category, target_query):
     print(f"\nFetching '{category}' locations via OpenStreetMap...")
 
@@ -70,7 +64,7 @@ def fetch_osm_data(category, target_query):
         name = tags.get('name', tags.get('ref', f'Unnamed {category}'))
         
         if 'center' in element:
-            lat = element['center']['lat']
+            lat = element['center']['lat'] # Some OSM elements return a 'center' with lat/lon instead of top-level 'lat' and 'lon'
             lon = element['center']['lon']
         else:
             lat = element.get('lat')
@@ -105,10 +99,8 @@ def extract_transform():
     print(f"\nTotal combined records to load: {len(final_gdf)}")
     return final_gdf
 
-# -------------------------------------------------------
-# LOAD
-# -------------------------------------------------------
 
+# LOAD
 def load_to_postgis(gdf):
     print("\nConnecting to the database...")
     engine = create_engine(
@@ -139,10 +131,8 @@ def load_to_postgis(gdf):
     except Exception as e:
         print(f"Error occurred while loading to database: {e}")
 
-# -------------------------------------------------------
-# MAIN ETL
-# -------------------------------------------------------
 
+# MAIN ETL
 def run_etl():
     try:
         gdf = extract_transform()
