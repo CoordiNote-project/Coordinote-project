@@ -9,7 +9,7 @@ import json
 
 
 DB_CONFIG = {
-    "database": "coordinote_share", 
+    "database": "coordinote_db", 
     "user": "postgres",
     "password": "postgres",        
     "host": "localhost",
@@ -20,11 +20,11 @@ DB_CONFIG = {
 db_pool = SimpleConnectionPool(
     minconn=1,
     maxconn=10,
-    database=DB_CONFIG["database"],
-    user=DB_CONFIG["user"],
-    password=DB_CONFIG["password"],
-    host=DB_CONFIG["host"],
-    port=DB_CONFIG["port"],
+    database=DB_CONFIG["coordinote_db"],
+    user=DB_CONFIG["postgres"],
+    password=DB_CONFIG["postgres"],
+    host=DB_CONFIG["localhost"],
+    port=DB_CONFIG["5432"],
     cursor_factory=RealDictCursor
 )
 

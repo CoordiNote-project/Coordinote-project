@@ -4,19 +4,16 @@ from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 
-# ---------------------------------------------------------
-# Database connection helper
-# This function creates and returns a new database connection.
-# ---------------------------------------------------------
+
+
 def get_db_connection():
     return psycopg2.connect(
-        dbname="your_db",
-        user="your_user",
-        password="your_password",
+        dbname="coordinote_db",
+        user="postgres",
+        password="postgres",
         host="localhost",
         port="5432"
     )
-
 # ---------------------------------------------------------
 # 1. Create Message (Text or Poll)
 # Endpoint: POST /messages

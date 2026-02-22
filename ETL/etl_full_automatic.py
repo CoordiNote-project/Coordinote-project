@@ -6,14 +6,13 @@ from shapely.geometry import Point
 from sqlalchemy import create_engine, text
 from geoalchemy2 import Geometry
 
-# -------------------------------------------------------
 # CONFIGURATION
 
 DB_USER = "postgres"      
 DB_PASSWORD = "postgres"  
 DB_HOST = "localhost"
 DB_PORT = "5432"
-DB_NAME = "coordinote_share"
+DB_NAME = "coordinote_db"
 TABLE_NAME = "locations"
 
 TRUNCATE_BEFORE_LOAD = True
