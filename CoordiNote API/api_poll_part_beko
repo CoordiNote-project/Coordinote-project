@@ -4,10 +4,8 @@ from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 
-# ---------------------------------------------------------
 # Database connection helper
 # This function creates and returns a new database connection.
-# ---------------------------------------------------------
 def get_db_connection():
     return psycopg2.connect(
         dbname="your_db",
@@ -17,18 +15,17 @@ def get_db_connection():
         port="5432"
     )
 
-# ---------------------------------------------------------
 # 1. Create Message (Text or Poll)
 # Endpoint: POST /messages
-#
+
 # If m_type = "text":
 #   - Only inserts into messages table.
-#
+
 # If m_type = "poll":
 #   - Inserts into messages table.
 #   - Inserts related options into poll_options table.
 #   - Enforces 2–5 option rule.
-# ---------------------------------------------------------
+
 @app.route("/messages", methods=["POST"])
 def create_message():
 
@@ -84,18 +81,17 @@ def create_message():
         conn.close()
 
 
-# ---------------------------------------------------------
 # 2. Vote in Poll
 # Endpoint: POST /poll/vote
-#
+
 # Logic:
 #   - Validate that the option exists.
 #   - Retrieve the related message_id.
 #   - Check whether the user has already voted in this poll.
 #   - If not, insert vote into poll_votes.
-#
+
 # Assumes a UNIQUE(user_id, message_id) constraint.
-# ---------------------------------------------------------
+
 @app.route("/poll/vote", methods=["POST"])
 def vote_poll():
 
@@ -149,17 +145,16 @@ def vote_poll():
         conn.close()
 
 
-# ---------------------------------------------------------
 # 3. Get Poll Results
 # Endpoint: GET /poll/results/<message_id>
-#
+
 # Returns:
 #   - option_id
 #   - option_text
 #   - vote_count
-#
+
 # Uses LEFT JOIN to ensure options with zero votes are included.
-# ---------------------------------------------------------
+
 @app.route("/poll/results/<int:m_id>", methods=["GET"])
 def poll_results(m_id):
 
@@ -192,15 +187,14 @@ def poll_results(m_id):
         conn.close()
 
 
-# ---------------------------------------------------------
 # 4. Get Poll Details
 # Endpoint: GET /poll/<message_id>
-#
+
 # Returns:
 #   - Poll message text
 #   - Creation date
 #   - All available options
-# ---------------------------------------------------------
+
 @app.route("/poll/<int:m_id>", methods=["GET"])
 def get_poll(m_id):
 
