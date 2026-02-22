@@ -14,8 +14,6 @@ let currentUser = null;
 let allMessages = [];
 let messageMarkers = [];
 let poiMarkers = [];
-let selectedLocation = null;
-let currentMsgType = 'text';
 let allUniverses = [];
 let allPOIs = [];
 let isRegisterMode = false;  
@@ -212,36 +210,6 @@ loadPOIs();
 // 
 function setupEventListeners() {
 
-  // Close modal buttons
-  const closeModalBtn = document.getElementById('closeModalBtn');
-  const cancelModalBtn = document.getElementById('cancelModalBtn');
-  if (closeModalBtn) closeModalBtn.addEventListener('click', closeCreateModal);
-  if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeCreateModal);
-
-  // Submit message
-  const submitBtn = document.getElementById('submitMessageBtn');
-  if (submitBtn) submitBtn.addEventListener('click', submitMessage);
-
-  // Type tabs
-  const typeTabs = document.querySelectorAll('.type-tab');
-  typeTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const type = tab.getAttribute('data-type');
-      setMsgType(type, tab);
-    });
-  });
-
-  // Radius slider
-  const radiusSlider = document.getElementById('radiusSlider');
-  if (radiusSlider) {
-    radiusSlider.addEventListener('input', (e) => {
-      const display = document.getElementById('radiusDisplay');
-      if (display) {
-        display.textContent = `${e.target.value} m`;
-      }
-    });
-  }
-
   // Close side panel
   const closePanelBtn = document.getElementById('closePanelBtn');
   if (closePanelBtn) {
@@ -399,7 +367,6 @@ async function loadMessages() {
       const data = await res.json();
       allMessages = data || [];
       renderMessageMarkers(allMessages);
-      updateStats();
       return;
     } catch (err) {
       console.warn('API not reachable, using demo data');
@@ -408,7 +375,6 @@ async function loadMessages() {
   // Demo fallback
   allMessages = getDemoMessages();
   renderMessageMarkers(allMessages);
-  updateStats();
 }
 
 function renderMessageMarkers(messages) {
@@ -571,7 +537,6 @@ async function deleteMessage(msgId) {
   allMessages = allMessages.filter(m => m.m_id !== msgId);
   renderMessageMarkers(allMessages);
   closeSidePanel();
-  updateStats();
   showToast('Message deleted 🚪', 'success');
 }
 
@@ -609,13 +574,6 @@ async function loadUniverses() {
 }
 
 function fillUniverseDropdowns() {
-  // Sidebar dropdown
-  const dropdown1 = document.getElementById('universeDropdown');
-  if (dropdown1) {
-    dropdown1.innerHTML = '<option value="all">All Universes</option>' +
-      allUniverses.map(u => `<option value="${u.uni_id}">${u.uni_name}</option>`).join('');
-  }
-
   // Sender modal dropdown (only universes the user hasn't left)
     const dropdown3 = document.getElementById('senderUniverseSelect');
   if (dropdown3) {
@@ -624,19 +582,10 @@ function fillUniverseDropdowns() {
       .map(u => `<option value="${u.uni_id}">${getUniverseIcon(u.uni_name)} ${u.uni_name}</option>`)
       .join('');
   }
+ }
 
-  // Modal dropdown
-  const dropdown2 = document.getElementById('modalUniverse');
-  if (dropdown2) {
-    dropdown2.innerHTML = allUniverses.map(u => 
-      `<option value="${u.uni_id}">${u.uni_name}</option>`
-    ).join('');
-  }
-}
-
-// 
 //  LOAD POIs
-// 
+
 async function loadPOIs() {
   try {
     const res = await fetch(
@@ -708,119 +657,9 @@ function renderPOIMarkers(pois) {
     poiMarkers.push(marker);
   });
 }
-
-//  CREATE MESSAGE
-
-function closeCreateModal() {
-  const modal = document.getElementById('createModal');
-  if (modal) modal.classList.add('hidden');
-  
-  // Reset form
-  const modalText = document.getElementById('modalText');
-  const modalQuestion = document.getElementById('modalQuestion');
-  if (modalText) modalText.value = '';
-  if (modalQuestion) modalQuestion.value = '';
-  
-  // Reset location
-  if (window.tempMarker) map.removeLayer(window.tempMarker);
-  selectedLocation = null;
-  
-  const chip = document.getElementById('locationChip');
-  if (chip) {
-    chip.className = 'location-chip';
-    chip.textContent = '🖱️ Click on the map to set location first';
-  }
-}
-
-function setMsgType(type, btn) {
-  currentMsgType = type;
-  
-  // Update active tab
-  document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-
-  // Show/hide fields
-  const textSection = document.getElementById('textSection');
-  const questionSection = document.getElementById('questionSection');
-  
-  if (currentMsgType === 'text') {
-    if (textSection) textSection.classList.remove('hidden');
-    if (questionSection) questionSection.classList.add('hidden');
-  } else {
-    if (textSection) textSection.classList.add('hidden');
-    if (questionSection) questionSection.classList.remove('hidden');
-  }
-}
-
-async function submitMessage() {
-  if (!selectedLocation) {
-    showToast('Please click on the map first!', 'error');
-    return;
-  }
-
-  if (!currentUser) {
-    showToast('Please login first!', 'error');
-    return;
-  }
-
-  const universeId = parseInt(document.getElementById('modalUniverse')?.value);
-  const unlockRadius = parseInt(document.getElementById('radiusSlider')?.value || 50);
-
-  const body = {
-    user_id: currentUser.id,
-    message_type: currentMsgType,
-    longitude: selectedLocation.lng,
-    latitude: selectedLocation.lat,
-    universe_id: universeId,
-    unlock_radius: unlockRadius
-  };
-
-  if (currentMsgType === 'text') {
-    const txt = document.getElementById('modalText')?.value.trim();
-    if (!txt) {
-      showToast('Please enter a message!', 'error');
-      return;
-    }
-    body.text_content = txt;
-  } else {
-    const q = document.getElementById('modalQuestion')?.value.trim();
-    if (!q) {
-      showToast('Please enter a question!', 'error');
-      return;
-    }
-    body.question = {
-      question_text: q,
-      answers: currentMsgType === 'yesno'
-        ? [{ answer_text: 'Yes', is_correct: true }, { answer_text: 'No', is_correct: false }]
-        : [{ answer_text: 'Option A', is_correct: true },
-           { answer_text: 'Option B', is_correct: false },
-           { answer_text: 'Option C', is_correct: false }]
-    };
-  }
-
-  try {
-    const res = await fetch(`${API}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    if (!res.ok) throw new Error('API error');
-
-    showToast('Message dropped! 📍', 'success');
-    closeCreateModal();
-    loadMessages();
-
-  } catch (err) {
-    console.warn('API error, using demo mode');
-    showToast('Message placed! (Demo mode)', 'success');
-    closeCreateModal();
-  }
-}
-
-// 
+ 
 //  HELPERS
-// 
+
 function showToast(msg, type = '') {
   const toast = document.getElementById('toast');
   if (!toast) return;
@@ -1133,7 +972,6 @@ function submitMessageFromSidebar() {
   // 4. saf
   messageCircles[newMsg.m_id] = circle;
   allMessages.push(newMsg);
-  updateStats();
 
   // 5. Reset form
   document.getElementById('senderTextContent').value = '';
@@ -1199,8 +1037,6 @@ function closeModalOnBg(event) {
     
     if (clickedModal.id === 'createUniverseModal') {
       closeCreateUniverseModal();
-    } else if (clickedModal.id === 'createModal') {
-      closeCreateModal();
     } else if (clickedModal.id === 'aboutModal') {
       closeAboutModal();
     } else if (clickedModal.id === 'discoverModal') {

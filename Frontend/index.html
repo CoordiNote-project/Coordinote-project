@@ -291,69 +291,6 @@
     </div>
   </div>
 
-  <!-- MODAL – Create Message -->
-  <div class="modal-backdrop hidden" id="createModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>📝 New Message</h2>
-        <button class="modal-close" id="closeModalBtn">✕</button>
-      </div>
-
-      <!-- Type tabs -->
-      <div class="type-tabs">
-        <button class="type-tab active" data-type="text">
-          <span>💬</span> Text
-        </button>
-        <button class="type-tab" data-type="yesno">
-          <span>❓</span> Yes / No
-        </button>
-        <button class="type-tab" data-type="poll">
-          <span>📊</span> Poll
-        </button>
-      </div>
-
-      <!-- Form -->
-      <div class="modal-form">
-
-        <!-- Universe -->
-        <label class="field-label">Universe</label>
-        <select id="modalUniverse" class="field-input"></select>
-
-        <!-- Text content (text only) -->
-        <div id="textSection">
-          <label class="field-label">Message</label>
-          <textarea id="modalText" class="field-input field-ta" rows="4"
-            placeholder="Write your message…"></textarea>
-        </div>
-
-        <!-- Question (yesno / poll) -->
-        <div id="questionSection" class="hidden">
-          <label class="field-label">Question</label>
-          <input type="text" id="modalQuestion" class="field-input"
-            placeholder="Enter your question…" />
-        </div>
-
-        <!-- Radius -->
-        <label class="field-label">
-          Unlock Radius — <strong id="radiusDisplay">50 m</strong>
-        </label>
-        <input type="range" id="radiusSlider" min="10" max="500"
-          value="50" class="slider" />
-
-        <!-- Location confirmation -->
-        <div class="location-chip" id="locationChip">
-          🖱️ Click on the map to set location first
-        </div>
-
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn-cancel" id="cancelModalBtn">Cancel</button>
-        <button class="btn-submit" id="submitMessageBtn">Drop Message 📍</button>
-      </div>
-    </div>
-  </div>
-
   </div> <!-- end map-wrap -->
 
 <!-- MODAL – Create Universe -->
