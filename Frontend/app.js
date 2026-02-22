@@ -367,14 +367,13 @@ function locateUser() {
 // 
 async function loadMessages() {
   if (!map) return;
-  if (USE_API && currentUser.location) {
+  if (USE_API && currentUser.token) {
     try {
-      const { lat, lng } = currentUser.location;
-const uniId = document.getElementById('senderUniverseSelect')?.value || allUniverses[0]?.uni_id;
-const res = await fetch(
-  `${API}/messages/nearby?lat=${lat}&lon=${lng}&uni_id=${uniId}`,
-  { headers: { 'Authorization': currentUser.token } }
-);
+      const bounds = map.getBounds();
+      const res = await fetch(
+        `${API}/messages/nearby?min_lat=${bounds.getSouth()}&max_lat=${bounds.getNorth()}&min_lon=${bounds.getWest()}&max_lon=${bounds.getEast()}`,
+        { headers: { 'Authorization': currentUser.token } }
+      );
       const data = await res.json();
       allMessages = data || [];
       renderMessageMarkers(allMessages);
@@ -387,7 +386,6 @@ const res = await fetch(
   allMessages = getDemoMessages();
   renderMessageMarkers(allMessages);
 }
-
 function renderMessageMarkers(messages) {
   messageMarkers.forEach(m => map.removeLayer(m));
   messageMarkers = [];
@@ -938,10 +936,10 @@ async function submitMessageFromSidebar() {
   }
 
     if (USE_API) {
-    try {
+    try {const uniName = allUniverses.find(u => u.uni_id == universeId)?.uni_name;
       const body = {
         m_type: currentSenderMsgType,
-        uni_id: universeId,
+        uni_name: uniName,
         unl_rad: radius,
         latitude: senderSelectedLocation.lat,
         longitude: senderSelectedLocation.lng,
@@ -1151,6 +1149,7 @@ async function submitCreateUniverse() {
     const res = await fetch(`${API}/universes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      'Authorization': currentUser.token
       body: JSON.stringify({
         uni_name: name,
         access: !newUniversePublic, 
