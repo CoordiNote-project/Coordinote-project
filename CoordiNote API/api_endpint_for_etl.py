@@ -31,9 +31,7 @@ db_pool = SimpleConnectionPool(
 # Initialize the Flask application
 app = Flask(__name__)
 
-# -------------------------------------------------------------------
 # HELPER FUNCTIONS
-# -------------------------------------------------------------------
 def get_db_connection():
     """Fetches a database connection from the connection pool."""
     return db_pool.getconn()
@@ -67,9 +65,7 @@ def get_current_user():
     finally:
         release_db_connection(conn)
 
-# -------------------------------------------------------------------
 # ROUTES / ENDPOINTS
-# -------------------------------------------------------------------
 
 # Home / Health Check Route
 @app.route("/")
@@ -115,9 +111,7 @@ def register_user():
     return jsonify({"message": "User created successfully", "us_id": us_id}), 201
 
 
-# -------------------------------------------------------------------
 # LOCATIONS ROUTE (Provides GeoJSON for the Frontend Map)
-# -------------------------------------------------------------------
 @app.route("/locations", methods=["GET"])
 def get_locations():
     """
@@ -132,7 +126,7 @@ def get_locations():
         category_filter = request.args.get("category")
 
         if category_filter:
-            cur.execute("""""
+            cur.execute("""
                 SELECT location_id, l_name, category, ST_AsGeoJSON(geom) as geometry
                 FROM locations
                 WHERE category = %s;
@@ -170,9 +164,7 @@ def get_locations():
         release_db_connection(conn)
 
 
-# -------------------------------------------------------------------
 # NEARBY MESSAGES ROUTE (Spatial Proximity & Security Logic)
-# -------------------------------------------------------------------
 @app.route("/messages/nearby", methods=["GET"])
 def nearby_messages():
     """
@@ -242,8 +234,6 @@ def nearby_messages():
     finally:
         release_db_connection(conn)
 
-# -------------------------------------------------------------------
 # SERVER EXECUTION
-# -------------------------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)

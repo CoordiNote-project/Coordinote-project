@@ -10,6 +10,7 @@ from psycopg2 import errors # This module contains exceptions that can be raised
 from passlib.hash import bcrypt # This is a library for hashing passwords securely, we will use it to hash user passwords before storing them in the database
 import uuid # for generating unique identifiers, we will use it to generate unique IDs for users and notes
 from datetime import datetime, timedelta # for working with dates and times, we will use it to set expiration times for authentication tokens
+import json # for working with JSON data, we will use it to parse and generate JSON for API requests and responses
 
 # Database configuration
 DB_CONFIG = {
@@ -389,6 +390,56 @@ def leave_universe():
     except Exception as e:
             conn.rollback()
             return jsonify({"error": str(e)}), 500
+
+    finally:
+        release_db_connection(conn)
+
+
+# LOCATIONS route
+# Returns POIs from the locations table as GeoJSON FeatureCollection for frontend map display.
+# Optional filter: ?category=metro --> ???
+@app.route("/locations", methods=["GET"])
+def get_locations():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        category_filter = request.args.get("category")
+
+        if category_filter:
+            cur.execute("""
+                SELECT location_id, l_name, category, ST_AsGeoJSON(geom) as geometry
+                FROM locations
+                WHERE category = %s;
+            """, (category_filter,))
+        else:
+            cur.execute("""
+                SELECT location_id, l_name, category, ST_AsGeoJSON(geom) as geometry
+                FROM locations;
+            """)
+
+        locations = cur.fetchall()
+
+        features = []
+        for loc in locations:
+            feature = {
+                "type": "Feature",
+                "geometry": json.loads(loc["geometry"]),
+                "properties": {
+                    "location_id": loc["location_id"],
+                    "name": loc["l_name"],
+                    "category": loc["category"]
+                }
+            }
+            features.append(feature)
+
+        return jsonify({
+            "type": "FeatureCollection",
+            "features": features
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
     finally:
         release_db_connection(conn)

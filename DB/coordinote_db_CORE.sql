@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict UFrUiiGnfSxen6an594NTwkOsB9iQmm7FbdVJO6s1l4s2gsXzwskBgvkxsb44zB
+\restrict 54LThgBJ0sH6o9N27NEkXlM3FUM40aB7Luynq1ZQeG5rLaGEz5TGw4SnlgbIK9K
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 18.0
 
--- Started on 2026-02-20 16:17:43
+-- Started on 2026-02-22 19:58:05
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -22,15 +22,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 5921 (class 0 OID 33188)
--- Dependencies: 221
--- Data for Name: locations; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-
-
---
--- TOC entry 5923 (class 0 OID 33200)
+-- TOC entry 5915 (class 0 OID 33200)
 -- Dependencies: 223
 -- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -50,32 +42,24 @@ INSERT INTO public.messages VALUES ('text', 30, '2026-02-20 15:09:09.942073', tr
 
 
 --
--- TOC entry 5924 (class 0 OID 33212)
--- Dependencies: 224
--- Data for Name: poll; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-
-
---
--- TOC entry 5933 (class 0 OID 33347)
--- Dependencies: 233
+-- TOC entry 5924 (class 0 OID 33347)
+-- Dependencies: 232
 -- Data for Name: poll_options; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 
 
 --
--- TOC entry 5935 (class 0 OID 33353)
--- Dependencies: 235
+-- TOC entry 5926 (class 0 OID 33353)
+-- Dependencies: 234
 -- Data for Name: poll_votes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 
 
 --
--- TOC entry 5930 (class 0 OID 33297)
--- Dependencies: 230
+-- TOC entry 5921 (class 0 OID 33297)
+-- Dependencies: 229
 -- Data for Name: seen; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -83,12 +67,11 @@ INSERT INTO public.seen VALUES (700010, 100005, '2026-02-20 15:18:42.612073');
 
 
 --
--- TOC entry 5932 (class 0 OID 33331)
--- Dependencies: 232
+-- TOC entry 5923 (class 0 OID 33331)
+-- Dependencies: 231
 -- Data for Name: sessions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.sessions VALUES (100, 100006, '5df5f907-df62-4f1e-8518-c1400db5a87d', '2026-02-20 12:54:10.56165', '2026-02-23 12:54:10.560671');
 INSERT INTO public.sessions VALUES (101, 100000, '95b5a15d-6040-4447-8f67-a78ca8d3c0ef', '2026-02-20 12:54:22.256447', '2026-02-23 12:54:22.256004');
 INSERT INTO public.sessions VALUES (102, 100002, '920f3f70-27f8-4f2b-a849-af86d358b44d', '2026-02-20 12:54:31.219257', '2026-02-23 12:54:31.218966');
 INSERT INTO public.sessions VALUES (103, 100001, 'e4cf9347-eb5c-4248-8dde-705eef265fce', '2026-02-20 12:54:44.192573', '2026-02-23 12:54:44.192202');
@@ -96,7 +79,7 @@ INSERT INTO public.sessions VALUES (104, 100005, '4475367b-9b22-400d-b2ca-dac800
 
 
 --
--- TOC entry 5705 (class 0 OID 32426)
+-- TOC entry 5700 (class 0 OID 32426)
 -- Dependencies: 217
 -- Data for Name: spatial_ref_sys; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -104,34 +87,35 @@ INSERT INTO public.sessions VALUES (104, 100005, '4475367b-9b22-400d-b2ca-dac800
 
 
 --
--- TOC entry 5925 (class 0 OID 33217)
--- Dependencies: 225
+-- TOC entry 5916 (class 0 OID 33217)
+-- Dependencies: 224
 -- Data for Name: universes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.universes VALUES ('CoordiNote_testingGroup', true, NULL, 400000);
-INSERT INTO public.universes VALUES ('LisboaFunfacts', false, NULL, 400001);
-INSERT INTO public.universes VALUES ('GeoTech252627', true, NULL, 400002);
-INSERT INTO public.universes VALUES ('RestaurantReviewsLisbon', false, NULL, 400003);
-INSERT INTO public.universes VALUES ('SunsetViewpoints', false, NULL, 400004);
-INSERT INTO public.universes VALUES ('Erasmus2026summer', false, NULL, 400005);
-INSERT INTO public.universes VALUES ('Swifties', false, NULL, 400006);
-INSERT INTO public.universes VALUES ('LisbonRepair', false, NULL, 400007);
-INSERT INTO public.universes VALUES ('LostAndFound', false, NULL, 400008);
-INSERT INTO public.universes VALUES ('LisbonEvents', false, NULL, 400009);
+INSERT INTO public.universes VALUES ('CoordiNote_testingGroup', true, 'We are the developers behind CoordiNote. Currently testing our project.', 400000);
+INSERT INTO public.universes VALUES ('LisboaFunfacts', false, 'Funfacts about the city of Lisbon.', 400001);
+INSERT INTO public.universes VALUES ('GeoTech252627', true, 'Universe for all GeoTech students.', 400002);
+INSERT INTO public.universes VALUES ('RestaurantReviewsLisbon', false, 'Users reviews of restaurants in Lisbon.', 400003);
+INSERT INTO public.universes VALUES ('SunsetViewpoints', false, 'Best viewpoints to watch the sunset in Lisbon.', 400004);
+INSERT INTO public.universes VALUES ('LisbonEvents', false, 'Universe for sharing information about events happening in Lisbon.', 400009);
+INSERT INTO public.universes VALUES ('LostAndFound', false, 'Universe for sharing information about lost and found items in Lisbon.', 400008);
+INSERT INTO public.universes VALUES ('LisbonRepair', false, 'Real-time sharing of information about locations in Lisbon that need construction or maintenance work.', 400007);
+INSERT INTO public.universes VALUES ('Swifties', false, 'Universe for all Taylor Swift fans worldwide. <3', 400006);
+INSERT INTO public.universes VALUES ('Erasmus2026summer', false, 'Erasmus student network for the summer semester of 2026.', 400005);
+INSERT INTO public.universes VALUES ('climbing crew <3', true, 'Best climbers in the city! Climbing, drinking coffee, chilling.', 400010);
 
 
 --
--- TOC entry 5937 (class 0 OID 33450)
--- Dependencies: 237
+-- TOC entry 5928 (class 0 OID 33450)
+-- Dependencies: 236
 -- Data for Name: unlocked; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 
 
 --
--- TOC entry 5936 (class 0 OID 33430)
--- Dependencies: 236
+-- TOC entry 5927 (class 0 OID 33430)
+-- Dependencies: 235
 -- Data for Name: user_univ; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -151,45 +135,47 @@ INSERT INTO public.user_univ VALUES (100005, 400008);
 INSERT INTO public.user_univ VALUES (100005, 400007);
 INSERT INTO public.user_univ VALUES (100005, 400005);
 INSERT INTO public.user_univ VALUES (100005, 400009);
+INSERT INTO public.user_univ VALUES (100002, 400010);
 
 
 --
--- TOC entry 5927 (class 0 OID 33229)
--- Dependencies: 227
+-- TOC entry 5918 (class 0 OID 33229)
+-- Dependencies: 226
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.users VALUES ('$2b$12$3eFlgYnaFlwMewG8p0BOueR8GcRJMgx5LvmUx5KWWQ3trZOySmLD2', 'anda', 100012);
+INSERT INTO public.users VALUES ('$2b$12$/MrRk6mL9BpvK2WNYJ1sd.MUoTGFjS7hX7AWP2WhEJtsErqa8GiIe', 'tilak', 100015);
 INSERT INTO public.users VALUES ('$2b$12$bl0BgxfDQwiIdf/rEDGC2.yje7O5qyCQzPqD51b3WGauNIr/u6W6S', 'marie_tr', 100000);
 INSERT INTO public.users VALUES ('$2b$12$6HdsPu6xJTpFIEk44lJoy.nl1f0riYq1oJMvK77JB2nbDakoYpK6m', 'bekirbeko', 100001);
 INSERT INTO public.users VALUES ('$2b$12$chqhLpGcE3JHD2VFMZA45ekYEiGbONOw3Pg.b5IIRkpZhHGBWznu.', 'wilmadora', 100002);
 INSERT INTO public.users VALUES ('$2b$12$3aB7yIE1FDzKsClWsnmBZeYB2kHTIP/jd/LbSTRqidY6t2h2rXSI6', 'jacobvanmeer', 100003);
 INSERT INTO public.users VALUES ('$2b$12$9vevClUbWCR7fkseB/bQn.vCQS7zHlaw7iMGD8qHPYBwz3vHbJYZm', 'lindaelfriede', 100004);
 INSERT INTO public.users VALUES ('$2b$12$DUZ8IIjn2WTylCTNXdrrE.bL0PwCQRKey3TrwYIKt4dUyfRihc.Ga', 'rikostryko', 100005);
-INSERT INTO public.users VALUES ('$2b$12$NqZXGBPgPLYJ.6KDotvsGOzar0qjYb.6F.8EYyoRSdreDMuvhnLUm', 'anda', 100006);
-INSERT INTO public.users VALUES ('$2b$12$Aqxt/9fO1G.VMITVfM9QauntZkbTm99Rt8w4awGGHtDfpIAkop8y6', 'anda', 100007);
+INSERT INTO public.users VALUES ('$2b$12$uZcPTdqwGH5nh2Ue4CTv5uU7Z6d0jJ51t8Xrw1uKE2NbCG4OEzaNC', 'Johana', 100009);
 
 
 --
--- TOC entry 5951 (class 0 OID 0)
+-- TOC entry 5941 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: locations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.locations_id_seq', 900000, false);
+SELECT pg_catalog.setval('public.locations_id_seq', 911584, true);
 
 
 --
--- TOC entry 5952 (class 0 OID 0)
--- Dependencies: 229
+-- TOC entry 5942 (class 0 OID 0)
+-- Dependencies: 228
 -- Name: messages_m_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.messages_m_id_seq', 700011, true);
+SELECT pg_catalog.setval('public.messages_m_id_seq', 700012, true);
 
 
 --
--- TOC entry 5953 (class 0 OID 0)
--- Dependencies: 234
+-- TOC entry 5943 (class 0 OID 0)
+-- Dependencies: 233
 -- Name: poll_options_option_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -197,17 +183,8 @@ SELECT pg_catalog.setval('public.poll_options_option_id_seq', 900000, false);
 
 
 --
--- TOC entry 5954 (class 0 OID 0)
--- Dependencies: 238
--- Name: poll_p_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
-SELECT pg_catalog.setval('public.poll_p_id_seq', 800000, false);
-
-
---
--- TOC entry 5955 (class 0 OID 0)
--- Dependencies: 231
+-- TOC entry 5944 (class 0 OID 0)
+-- Dependencies: 230
 -- Name: sessions_session_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -215,28 +192,28 @@ SELECT pg_catalog.setval('public.sessions_session_id_seq', 104, true);
 
 
 --
--- TOC entry 5956 (class 0 OID 0)
--- Dependencies: 226
+-- TOC entry 5945 (class 0 OID 0)
+-- Dependencies: 225
 -- Name: universe_uni_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.universe_uni_id_seq', 400009, true);
+SELECT pg_catalog.setval('public.universe_uni_id_seq', 400010, true);
 
 
 --
--- TOC entry 5957 (class 0 OID 0)
--- Dependencies: 228
+-- TOC entry 5946 (class 0 OID 0)
+-- Dependencies: 227
 -- Name: users_us_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_us_id_seq', 100007, true);
+SELECT pg_catalog.setval('public.users_us_id_seq', 100015, true);
 
 
--- Completed on 2026-02-20 16:17:44
+-- Completed on 2026-02-22 19:58:06
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict UFrUiiGnfSxen6an594NTwkOsB9iQmm7FbdVJO6s1l4s2gsXzwskBgvkxsb44zB
+\unrestrict 54LThgBJ0sH6o9N27NEkXlM3FUM40aB7Luynq1ZQeG5rLaGEz5TGw4SnlgbIK9K
 
