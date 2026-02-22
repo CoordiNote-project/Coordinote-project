@@ -77,7 +77,7 @@ function toggleRegisterMode() {
 // ═══════════════════════════════════════════════
 //  LOGIN
 // ═══════════════════════════════════════════════
-function handleLogin() {
+async function handleLogin() {
   const loginModal = document.getElementById('loginModal');
   const app = document.getElementById('app');
   const loginUser = document.getElementById('loginUser');
@@ -145,11 +145,30 @@ function handleLogin() {
     return;
   }
 
-  // ═══ LOGIN MODE ═══
-  const validUser = DEMO_USERS.find(u => 
-    u.username === username && u.password === password
-  );
-
+  // LOGIN MODE 
+// ═══ LOGIN MODE ═══
+if (USE_API) {
+  try {
+    const res = await fetch(`${API}/users/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      loginError.classList.remove('hidden');
+      loginError.textContent = `❌ ${data.error}`;
+      return;
+    }
+    currentUser = { username, id: data.us_id, token: data.token, location: null };
+  } catch (err) {
+    loginError.classList.remove('hidden');
+    loginError.textContent = '❌ Server not reachable';
+    return;
+  }
+} else {
+  // Demo mode
+  const validUser = DEMO_USERS.find(u => u.username === username && u.password === password);
   if (!validUser) {
     if (loginError) {
       loginError.classList.remove('hidden');
@@ -157,45 +176,39 @@ function handleLogin() {
     }
     return;
   }
-
-  // Login successful!
-  currentUser = { 
-    username: username, 
-    id: 1001,
-    location: null
-  };
-  
-  // Get user location for lock/unlock
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(pos => {
-      currentUser.location = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude
-      };
-      console.log('✓ Got user location:', currentUser.location);
-      loadMessages();
-    });
-  }
-
-  // Update UI
-  const userAvatar = document.getElementById('userAvatar');
-  const userName = document.getElementById('userName');
-  if (userAvatar) userAvatar.textContent = username.substring(0, 2).toUpperCase();
-  if (userName) userName.textContent = username;
-
-  if (loginModal) loginModal.classList.add('hidden');
-  if (app) app.classList.remove('hidden');
-
-  console.log('✓ User logged in:', username);
-  initMap();
-  loadUniverses();
-  loadMessages();
-  loadPOIs();
+  currentUser = { username, id: 1001, token: null, location: null };
 }
 
-// ═══════════════════════════════════════════════
+// Get user location
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    currentUser.location = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude
+    };
+    console.log('✓ Got user location:', currentUser.location);
+    loadMessages();
+  });
+}
+
+// Update UI
+const userAvatar = document.getElementById('userAvatar');
+const userName = document.getElementById('userName');
+if (userAvatar) userAvatar.textContent = username.substring(0, 2).toUpperCase();
+if (userName) userName.textContent = username;
+
+if (loginModal) loginModal.classList.add('hidden');
+if (app) app.classList.remove('hidden');
+
+console.log('✓ User logged in:', username);
+initMap();
+loadUniverses();
+loadMessages();
+loadPOIs();
+}
+// 
 //  EVENT LISTENERS
-// ═══════════════════════════════════════════════
+// 
 function setupEventListeners() {
 
   // Close modal buttons
@@ -264,6 +277,32 @@ function setupEventListeners() {
       location.reload(); // Simple logout - just reload page
     });
   }
+    const resizer = document.getElementById('sidebarResizer');
+  const sidebar = document.getElementById('sidebar');
+
+  if (resizer && sidebar) {
+    let isResizing = false;
+
+    resizer.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 200 && newWidth <= 500) {
+        sidebar.style.width = newWidth + 'px';
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+  }
 }
 
 // 
@@ -283,30 +322,42 @@ function initMap() {
 
   // Click to select location
   map.on('click', onMapClick);
+  // User location pin
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
 
+    L.marker([lat, lng], {
+      icon: L.divIcon({
+        html: `<div style="font-size:2rem">📍</div>`,
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30]
+      })
+    }).addTo(map).bindPopup('📍 You are here');
+
+    map.setView([lat, lng], 15);
+  });
+}
   console.log('✓ Map initialized!');
 }
 
 function onMapClick(e) {
-  selectedLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
-
-  // Remove old temp marker
-  if (window.tempMarker) map.removeLayer(window.tempMarker);
-
-  // Add new temp marker
-  window.tempMarker = L.circleMarker(e.latlng, {
-    radius: 12,
-    fillColor: '#f5a623',
-    fillOpacity: 0.8,
-    color: 'white',
-    weight: 2
-  }).addTo(map).bindPopup('📍 New message location').openPopup();
-
-  // Update location chip
-  const chip = document.getElementById('locationChip');
-  if (chip) {
-    chip.className = 'location-chip ok';
-    chip.textContent = `✓ Location: ${e.latlng.lat.toFixed(4)}°N, ${Math.abs(e.latlng.lng).toFixed(4)}°W`;
+  const senderView = document.getElementById('viewSender');
+  if (senderView?.classList.contains('active') && locationMode === 'pin') {
+    senderSelectedLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+    
+    if (window.tempMarker) map.removeLayer(window.tempMarker);
+    window.tempMarker = L.circleMarker(e.latlng, {
+      radius: 12,
+      fillColor: '#f5a623',
+      fillOpacity: 0.8,
+      color: 'white',
+      weight: 2
+    }).addTo(map).bindPopup('📍 New message location').openPopup();
+    
+    updateLocationDisplay(senderSelectedLocation);
   }
 }
 
@@ -341,31 +392,31 @@ function locateUser() {
 }
 
 // 
-//  LOAD MESSAGES
+//  LOAD MESSAGES plus location mitsenden 
 // 
 async function loadMessages() {
   if (!map) return;
-  
-  const center = map.getCenter();
-  const radius = 5000; // 5km
-
-  try {
-    const res = await fetch(
-      `${API}/messages/nearby?latitude=${center.lat}&longitude=${center.lng}&radius=${radius}`
-    );
-    const data = await res.json();
-    allMessages = data.messages || [];
-    
-    console.log('✓ Loaded', allMessages.length, 'messages');
-    renderMessageMarkers(allMessages);
-    updateStats();
-
-  } catch (err) {
-    console.warn('API not reachable, using demo data');
-    allMessages = getDemoMessages();
-    renderMessageMarkers(allMessages);
-    updateStats();
+  if (USE_API && currentUser.location) {
+    try {
+      const { lat, lng } = currentUser.location;
+      const uniId = document.getElementById('universeDropdown')?.value;
+      const res = await fetch(
+        `${API}/messages/nearby?lat=${lat}&lon=${lng}&uni_id=${uniId}`,
+        { headers: { 'Authorization': currentUser.token } }
+      );
+      const data = await res.json();
+      allMessages = data || [];
+      renderMessageMarkers(allMessages);
+      updateStats();
+      return;
+    } catch (err) {
+      console.warn('API not reachable, using demo data');
+    }
   }
+  // Demo fallback
+  allMessages = getDemoMessages();
+  renderMessageMarkers(allMessages);
+  updateStats();
 }
 
 function renderMessageMarkers(messages) {
@@ -432,7 +483,7 @@ function showMessageDetail(msg) {
               style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);
                      border-radius:8px;padding:8px 12px;color:#ff4d6d;cursor:pointer;
                      font-size:0.8rem;margin-bottom:12px;width:100%">
-        🗑️ Delete Message
+        Delete Message
       </button>
     `;
   }
@@ -510,7 +561,7 @@ async function deleteMessage(msgId) {
   renderMessageMarkers(allMessages);
   closeSidePanel();
   updateStats();
-  showToast('Message deleted 🗑️', 'success');
+  showToast('Message deleted 🚪', 'success');
 }
 
 function filterMessagesByUniverse(uniId) {
@@ -531,8 +582,7 @@ async function loadUniverses() {
     fillUniverseDropdowns();
     renderUniverseListInReceiver();
     return;
-  }// here API call later
-
+  }
     try {
     const res = await fetch(`${API}/universes?user_id=${currentUser.id}`);
     const data = await res.json();
@@ -927,7 +977,7 @@ function searchUniverses(query) {
         </div>
         ${isHidden
           ? `<div class="uni-item-delete" onclick="rejoinUniverse(${u.uni_id}, event)" title="Rejoin">➕</div>`
-          : `<div class="uni-item-delete" onclick="deleteUniverse(${u.uni_id}, event)" title="Leave">🗑️</div>`
+          : `<div class="uni-item-delete" onclick="deleteUniverse(${u.uni_id}, event)" title="Leave">🚪</div>`
         }
       </div>
     `;
@@ -1002,12 +1052,37 @@ function updateSenderRadius(val) {
 
 function searchLocation(event) {
   if (event.key === 'Enter') {
-    const query = event.target.value;
-    showToast('Location search - coming soon! Try "Drop Pin" mode');
-    // TODO: Add geocoding API (Nominatim/Google)
+    const query = event.target.value.toLowerCase();
+    
+    // POIs durchsuchen
+    const found = allPOIs.find(poi => 
+      poi.poi_name.toLowerCase().includes(query)
+    );
+    
+    if (found) {
+      // Karte auf POI zoomen
+      map.setView([found.latitude, found.longitude], 17);
+      
+      // Temp marker setzen
+      if (window.tempMarker) map.removeLayer(window.tempMarker);
+      window.tempMarker = L.circleMarker([found.latitude, found.longitude], {
+        radius: 12,
+        fillColor: '#f5a623',
+        fillOpacity: 0.8,
+        color: 'white',
+        weight: 2
+      }).addTo(map).bindPopup(`📍 ${found.poi_name}`).openPopup();
+      
+      // Location setzen
+      senderSelectedLocation = { lat: found.latitude, lng: found.longitude };
+      updateLocationDisplay(senderSelectedLocation);
+      
+      showToast(`📍 ${found.poi_name} selected!`, 'success');
+    } else {
+      showToast('No POI found — try another name', 'error');
+    }
   }
 }
-
 function submitMessageFromSidebar() {
   if (!senderSelectedLocation) {
     showToast('Please select a location first!', 'error');
@@ -1110,32 +1185,9 @@ function updateLocationDisplay(location) {
   }
 }
 
-// Update the onMapClick function
-function onMapClick(e) {
-  // If in sender view and pin mode, set location
-  const senderView = document.getElementById('viewSender');
-  if (senderView?.classList.contains('active') && locationMode === 'pin') {
-    senderSelectedLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
-    
-    // Remove old temp marker
-    if (window.tempMarker) map.removeLayer(window.tempMarker);
-    
-    // Add new temp marker
-    window.tempMarker = L.circleMarker(e.latlng, {
-      radius: 12,
-      fillColor: '#f5a623',
-      fillOpacity: 0.8,
-      color: 'white',
-      weight: 2
-    }).addTo(map).bindPopup('📍 New message location').openPopup();
-    
-    updateLocationDisplay(senderSelectedLocation);
-  }
-}
 
-// ═══════════════════════════════════════════════
+// 
 //  CREATE & DELETE UNIVERSE
-// ═══════════════════════════════════════════════
 
 let newUniversePublic = true; // Default: public
 
@@ -1173,10 +1225,12 @@ function closeModalOnBg(event) {
       closeCreateUniverseModal();
     } else if (clickedModal.id === 'createModal') {
       closeCreateModal();
-    }
-    } else if (clickedModal.id === 'discoverModal') {  
+    } else if (clickedModal.id === 'aboutModal') {
+      closeAboutModal();
+    } else if (clickedModal.id === 'discoverModal') {
       closeDiscoverModal();
     }
+  }
 }
 
 function setUniversePrivacy(isPublic, btn) {
@@ -1289,7 +1343,7 @@ function renderUniverseListInReceiver() {
         <div class="uni-item-count">${u.message_count || 0} messages</div>
       </div>
       <div class="uni-item-delete" onclick="deleteUniverse(${u.uni_id}, event)" title="Delete">
-        🗑️
+        🚪
       </div>
     </div>
   `).join('');
@@ -1357,14 +1411,8 @@ function openAboutModal() {
 
 function closeAboutModal() {
   document.getElementById('aboutModal').classList.add('hidden');
-  if (clickedModal.id === 'createUniverseModal') {
-  closeCreateUniverseModal();
-} else if (clickedModal.id === 'createModal') {
-  closeCreateModal();
-} else if (clickedModal.id === 'aboutModal') {  
-  closeAboutModal();
 }
-}
+
 
 function openDiscoverModal() {
   const list = document.getElementById('discoverList');

@@ -21,8 +21,23 @@ function showMain() {
   document.getElementById("mainScreen").style.display = "block";
 }
 </script>
+<body>
+<div id="app">
 
-<!-- discover universes -->
+    <!-- MODAL – About -->
+<div id="aboutModal" class="modal-backdrop hidden" onclick="closeModalOnBg(event)">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>ℹ️ About CoordiNote</h2>
+      <button class="modal-close" onclick="closeAboutModal()">✕</button>
+    </div>
+    <div class="modal-form">
+      <p style="color:#6b7280;font-size:0.9rem">Info about group members and project details.</p>
+    </div>
+  </div>
+</div>
+
+    <!-- discover universes -->
 <div id="discoverModal" class="modal-backdrop hidden" onclick="closeModalOnBg(event)">
   <div class="modal modal-sm">
     <div class="modal-header">
@@ -34,14 +49,13 @@ function showMain() {
     </div>
   </div>
 </div>
-
-
-<body>
-<div id="app">
-
   <!-- building the Sidebar -->
 <!-- NEW SIDEBAR WITH TWO VIEWS -->
 <aside class="sidebar" id="sidebar">
+  <div class="sidebar-resizer" id="sidebarResizer"></div>
+  
+  <!-- ═══ SIDEBAR HEADER (always visible) ═══ -->
+  <div class="sidebar-header">
 
   <!-- ═══ SIDEBAR HEADER (always visible) ═══ -->
   <div class="sidebar-header">
@@ -97,14 +111,12 @@ function showMain() {
           id="btnDeleteUniverse"
           onclick="deleteSelectedUniverse()"
           title="Delete Universe">
-    🗑️
+    
   </button>
 
   </div>
 
-  <!-- ═══════════════════════════════════════════════
-       📤 SENDER VIEW (hidden by default)
-  ═══════════════════════════════════════════════ -->
+  <!-- SENDER VIEW (hidden by default) -->
   <div class="sidebar-view" id="viewSender">
     
     <div class="section-title">Create New Message</div>
@@ -184,20 +196,6 @@ function showMain() {
       <div class="location-text">Click on map to set location</div>
     </div>
 
-    <!-- Unlock Radius -->
-    <div class="form-group-compact">
-      <label class="field-label-small">
-        Unlock Radius: <strong id="senderRadiusLabel">50m</strong>
-      </label>
-      <input type="range" id="senderRadiusSlider" min="20" max="500" value="50" 
-             class="slider" oninput="updateSenderRadius(this.value)"/>
-    </div>
-
-    <!-- Submit Button -->
-    <button class="btn-submit-sidebar" onclick="submitMessageFromSidebar()">
-      Drop Message 📍
-    </button>
-
 <!-- Unlock Radius -->
     <div class="form-group-compact">
       <label class="field-label-small">
@@ -208,13 +206,14 @@ function showMain() {
     </div>
 
     <!-- View Once Toggle -->
- <div class="form-group-compact" style="display:flex;align-items:center;justify-content:space-between">
+<!-- View Once Toggle -->
+<div class="form-group-compact" style="display:flex;align-items:center;justify-content:space-between">
   <label class="field-label-small" style="margin:0">
-    👁️ View Once
+    <span id="viewOnceIcon">👁️</span> View Once
     <div style="font-size:0.7rem;color:#6b7280;font-weight:400">Disappears after first read</div>
   </label>
   <label class="toggle-switch">
-    <input type="checkbox" id="viewOnceToggle">
+    <input type="checkbox" id="viewOnceToggle" onchange="updateViewOnceIcon(this)">
     <span class="toggle-slider"></span>
   </label>
 </div>
