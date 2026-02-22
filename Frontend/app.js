@@ -20,6 +20,8 @@ let isRegisterMode = false;
 let hiddenUniverses = []; // universes the user has "left"
 let messageCircles = {}; // saves circles per m_id
 let seenMessages = new Set(); // saves seen message IDs
+let selectedLocation = null;      
+let currentMsgType = 'text'; 
 
 // 
 //  START APP (when page loads)
@@ -1148,8 +1150,9 @@ async function submitCreateUniverse() {
     // Try API first
     const res = await fetch(`${API}/universes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json',
       'Authorization': currentUser.token
+    },
       body: JSON.stringify({
         uni_name: name,
         access: !newUniversePublic, 
