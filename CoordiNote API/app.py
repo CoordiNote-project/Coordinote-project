@@ -550,7 +550,6 @@ def nearby_messages():
     max_lat  = request.args.get("max_lat")
     min_lon  = request.args.get("min_lon")
     max_lon  = request.args.get("max_lon")
-    uni_name = request.args.get("uni_name")  # optional filter to only get messages from a specific universe
 
     if not all([min_lat, max_lat, min_lon, max_lon]):
         return jsonify({"error": "min_lat, max_lat, min_lon, max_lon are required"}), 400
@@ -586,9 +585,10 @@ def nearby_messages():
         release_db_connection(conn)
 
 # DELETE message route --> should this be done in the database??
+# Only the creator can delete, within 30 minutes of posting.
+# poll_options and poll_votes are cleaned up automatically by ON DELETE CASCADE in the DB.
 @app.route("/messages/<int:m_id>", methods=["DELETE"])
 def delete_message(m_id):
-
     # Get current user from token
     us_id, error = get_current_user()
     if error:
@@ -600,7 +600,7 @@ def delete_message(m_id):
     try:
         # Fetch message info
         cur.execute("""
-            SELECT creator, crt_time
+            SELECT creator, crt_time, location_id
             FROM messages
             WHERE m_id = %s;
         """, (m_id,))
@@ -614,28 +614,19 @@ def delete_message(m_id):
         if message["creator"] != us_id:
             return jsonify({"error": "You can only delete your own messages"}), 403
 
-        # Check 30-minute time limit --> SHOULD WE CHANGE THAT TO LESS?
-        from datetime import datetime, timedelta # can I skip this if it's already imported at the top?
-
-        created_at = message["crt_time"]
-        time_limit = created_at + timedelta(minutes=30)
-
+        time_limit = message["crt_time"] + timedelta(minutes=30)
         if datetime.utcnow() > time_limit:
-            return jsonify({
-                "error": "Delete time window expired (30 minutes)"
-            }), 403
+            return jsonify({"error": "Delete time window expired (30 minutes)"}), 403
 
-        # Delete message
-        cur.execute("""
-            DELETE FROM messages
-            WHERE m_id = %s;
-        """, (m_id,))
+        # Delete message — poll_options and poll_votes cascade automatically
+        cur.execute("DELETE FROM messages WHERE m_id = %s;", (m_id,))
+
+        # Clean up the orphaned location row (no cascade possible here — FK goes the other way)
+        if message["location_id"]:
+            cur.execute("DELETE FROM locations WHERE location_id = %s;", (message["location_id"],))
 
         conn.commit()
-
-        return jsonify({
-            "message": "Message deleted successfully"
-        }), 200
+        return jsonify({"message": "Message deleted successfully"}), 200
 
     except Exception as e:
         conn.rollback()
