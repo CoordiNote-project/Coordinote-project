@@ -808,7 +808,7 @@ def vote_poll():
         if cur.fetchone():
             return jsonify({"error": "You have already voted in this poll"}), 409
 
-        # Insert vote
+        # Insert vote - should be by clicking!!
         cur.execute("""
             INSERT INTO poll_votes (option_id, us_id, m_id)
             VALUES (%s, %s, %s);
@@ -825,10 +825,10 @@ def vote_poll():
         release_db_connection(conn)
 
 
-# POLLS – GET /poll/<m_id>
-# Returns p_txt + all poll_options / option_text.
-#  Used to display the poll BEFORE the user has voted.
-#  If user already voted, tells them to fetch results instead.
+# POLLS: GET /poll/<m_id>
+# Returns p_txt + all poll_options
+# Used to display the poll BEFORE the user has voted.
+# If user already voted, tells them to fetch results instead.
 
 @app.route("/poll/<int:m_id>", methods=["GET"])
 def get_poll(m_id):
@@ -869,7 +869,7 @@ def get_poll(m_id):
                 "error": "Already voted. Fetch results at GET /poll/<m_id>/results"
             }), 403
 
-        # Get options without vote counts
+        # Get poll options
         cur.execute("""
             SELECT option_id, option_text
             FROM poll_options
@@ -879,9 +879,9 @@ def get_poll(m_id):
         options = cur.fetchall()
 
         return jsonify({
-            "m_id":         message["m_id"],
-            "p_txt":     message["p_txt"],
-            "crt_time":     str(message["crt_time"]),
+            "m_id": message["m_id"],
+            "p_txt": message["p_txt"],
+            "crt_time": str(message["crt_time"]),
             "poll_options": list(options)
         }), 200
 
@@ -892,13 +892,12 @@ def get_poll(m_id):
         release_db_connection(conn)
 
 
-# POLLS  –  GET /poll/<m_id>/results
+# POLLS: GET /poll/<m_id>/results
 # Returns vote counts per option + total.
 # Only accessible AFTER the current user has voted.
 
 @app.route("/poll/<int:m_id>/results", methods=["GET"])
 def poll_results(m_id):
-
     us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
