@@ -35,16 +35,6 @@ body {
 }
 
 /* SIDEBAR (Map View) */
-.btn-create:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(245,166,35,0.3);
-}
-
-/* Map */
-.map-container {
-  flex: 1;
-  height: 100%;
-}
 
 /*  MAP WRAP & APP LAYOUT (CRITICAL FOR YOUR HTML!) */
 #app {
@@ -104,39 +94,6 @@ body {
   background: var(--amber-bg);
   color: var(--amber);
   border-color: rgba(245,166,35,0.3);
-}
-
-/* FAB button (+ Drop Message) */
-.fab {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, var(--amber), #e87b0e);
-  color: #0c0e14;
-  border: none;
-  border-radius: 100px;
-  padding: 14px 24px;
-  font-family: 'Syne', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 6px 24px rgba(245,166,35,0.4);
-  z-index: 400;
-  transition: all 0.2s;
-}
-
-.fab:hover {
-  transform: translateX(-50%) translateY(-2px);
-  box-shadow: 0 8px 30px rgba(245,166,35,0.5);
-}
-
-.fab-plus {
-  font-size: 1.2rem;
-  font-weight: 700;
 }
 
 /* Side panel for message details */
@@ -222,52 +179,10 @@ body {
   background: var(--surface);
 }
 
-.uni-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
 .uni-count {
   margin-left: auto;
   font-size: 0.7rem;
   color: var(--muted);
-}
-
-.stats-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.stat {
-  flex: 1;
-  text-align: center;
-}
-
-.stat-val {
-  display: block;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--amber);
-  margin-bottom: 2px;
-}
-
-.stat-lbl {
-  font-size: 0.7rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.stat-divider {
-  width: 1px;
-  background: var(--border);
 }
 
 .user-row {
@@ -409,11 +324,7 @@ body {
 }
 
 /*  MODAL (Popup-Fenster)*/
-.modal-head h3 {
-  font-family: 'Syne', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
+
 .modal-close {
   width: 30px; height: 30px;
   background: var(--surface);
@@ -426,13 +337,6 @@ body {
   transition: all 0.15s;
 }
 .modal-close:hover { color: var(--text); }
-
-.modal-body { padding: 20px; }
-.modal-foot {
-  padding: 0 20px 20px;
-  display: flex;
-  gap: 10px;
-}
 
 /* Typ-Tabs im Modal */
 .type-tabs {
@@ -468,7 +372,6 @@ body {
 }
 
 /* Formular-Felder */
-.field { margin-bottom: 14px; }
 .field-label {
   display: block;
   font-size: 0.72rem;
@@ -491,7 +394,6 @@ body {
   transition: border-color 0.2s;
 }
 .field-input:focus { border-color: rgba(245,166,35,0.4); }
-.field-textarea { height: 90px; resize: vertical; }
 
 /* Location Chip */
 .location-chip {
@@ -547,21 +449,7 @@ body {
   box-shadow: 0 4px 16px rgba(245,166,35,0.3);
 }
 
-.btn-small {
-  padding: 7px 14px;
-  background: var(--amber-bg);
-  border: 1px solid rgba(245,166,35,0.25);
-  border-radius: 8px;
-  color: var(--amber);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-/* ═══════════════════════════════════════════════
-   TOAST NOTIFICATION
-═══════════════════════════════════════════════ */
+/* TOAST NOTIFICATION */
 .toast {
   position: fixed;
   bottom: 24px;
@@ -584,14 +472,14 @@ body {
 /* ── Utility ── */
 .hidden { display: none !important; }
 
-/* ═══════════════════════════════════════════════
-   NEW SIDEBAR WITH DUAL VIEWS
-═══════════════════════════════════════════════ */
+/* NEW SIDEBAR WITH DUAL VIEWS */
 
 /* Sidebar stays same size */
 .sidebar {
-  width: 320px;
-  min-width: 320px;
+  width: var(--sidebar-width, 320px);
+  min-width: 200px;
+  max-width: 500px;
+  position: relative;
   background: var(--card);
   border-right: 1px solid var(--border);
   display: flex;
@@ -1035,14 +923,6 @@ body {
   .section-title { display: none; }
   .universe-list { display: none; }
 
-  /* Stats inline */
-  .stats-box {
-    display: flex;
-    flex-direction: row;
-    gap: 12px;
-    margin: 0;
-  }
-
   /* User row compact */
   .user-row { margin-top: 0; }
   .user-sub  { display: none; }
@@ -1057,14 +937,6 @@ body {
   #map {
     width: 100%;
     height: 100%;
-  }
-
-  /* ── FAB button bigger (easier to tap) ── */
-  .fab {
-    bottom: 12px;
-    right: 12px;
-    padding: 12px 18px;
-    font-size: 0.9rem;
   }
 
   /* ── Toolbar smaller ── */
@@ -1148,14 +1020,6 @@ body {
 
 .toggle-switch input:checked + .toggle-slider:before {
   transform: translateX(18px);
-}
-
-.sidebar {
-  /* bestehende styles bleiben, nur width ändern: */
-  width: var(--sidebar-width, 320px);
-  min-width: 200px;
-  max-width: 500px;
-  position: relative;
 }
 
 .sidebar-resizer {
