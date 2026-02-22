@@ -73,9 +73,9 @@ function toggleRegisterMode() {
   }
 }
 
-// ═══════════════════════════════════════════════
+// 
 //  LOGIN
-// ═══════════════════════════════════════════════
+// 
 async function handleLogin() {
   const loginModal = document.getElementById('loginModal');
   const app = document.getElementById('app');
@@ -117,30 +117,40 @@ async function handleLogin() {
       }
       return;
     }
-    
-    // Check if username already exists
-    const userExists = DEMO_USERS.find(u => u.username === username);
-    if (userExists) {
+
+ try {
+    const res = await fetch(`${API}/users/register`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    username, 
+    password, 
+    repeat_password: passwordConfirm 
+  })
+});
+
+    const data = await res.json();
+
+      if (!res.ok) {
+        if (loginError) {
+          loginError.classList.remove('hidden');
+          loginError.textContent = `❌ ${data.error}`;
+        }
+        return;
+      }
+
+      showToast('Account created! ✅ You can now login', 'success');
+      toggleRegisterMode();
+      if (loginUser) loginUser.value = '';
+      if (loginPass) loginPass.value = '';
+      if (loginPassConfirm) loginPassConfirm.value = '';
+
+    } catch (err) {
       if (loginError) {
         loginError.classList.remove('hidden');
-        loginError.textContent = '❌ Username already taken';
+        loginError.textContent = '❌ Server not reachable';
       }
-      return;
     }
-    
-    // Create new user
-    DEMO_USERS.push({ username: username, password: password });
-    
-    showToast('Account created! ✅ You can now login', 'success');
-    
-    // Switch back to login mode
-    toggleRegisterMode();
-    
-    // Clear fields
-    if (loginUser) loginUser.value = '';
-    if (loginPass) loginPass.value = '';
-    if (loginPassConfirm) loginPassConfirm.value = '';
-    
     return;
   }
 
@@ -159,7 +169,7 @@ if (USE_API) {
       loginError.textContent = `❌ ${data.error}`;
       return;
     }
-    currentUser = { username, id: data.us_id, token: data.token, location: null };
+  currentUser = { username: data.us_name, id: data.us_id, token: data.token, location: null };
   } catch (err) {
     loginError.classList.remove('hidden');
     loginError.textContent = '❌ Server not reachable';
@@ -360,10 +370,11 @@ async function loadMessages() {
   if (USE_API && currentUser.location) {
     try {
       const { lat, lng } = currentUser.location;
-      const res = await fetch(
-        `${API}/messages/nearby?lat=${lat}&lon=${lng}&uni_id=${uniId}`,
-        { headers: { 'Authorization': currentUser.token } }
-      );
+const uniId = document.getElementById('senderUniverseSelect')?.value || allUniverses[0]?.uni_id;
+const res = await fetch(
+  `${API}/messages/nearby?lat=${lat}&lon=${lng}&uni_id=${uniId}`,
+  { headers: { 'Authorization': currentUser.token } }
+);
       const data = await res.json();
       allMessages = data || [];
       renderMessageMarkers(allMessages);
@@ -559,10 +570,19 @@ async function loadUniverses() {
     renderUniverseListInReceiver();
     return;
   }
-    try {
-    const res = await fetch(`${API}/universes?user_id=${currentUser.id}`);
-    const data = await res.json();
-    allUniverses = data.universes || [];
+try {
+  const res = await fetch(`${API}/universes`, {
+    headers: { 'Authorization': currentUser.token }  // ← so
+  });
+  const data = await res.json();
+  allUniverses = data.map(u => ({
+    uni_id: u.uni_id,
+    uni_name: u.uni_name,
+    pub_priv: !u.access,
+    descri: u.descri,
+    message_count: 0,
+    member_count: 0
+  }));
     fillUniverseDropdowns();
     renderUniverseListInReceiver();
   } catch (err) {
@@ -898,34 +918,65 @@ function searchLocation(event) {
     }
   }
 }
-function submitMessageFromSidebar() {
+async function submitMessageFromSidebar() {
   if (!senderSelectedLocation) {
     showToast('Please select a location first!', 'error');
     return;
   }
-  
+
   const universeId = parseInt(document.getElementById('senderUniverseSelect').value);
   const radius = parseInt(document.getElementById('senderRadiusSlider').value);
-  
-  let content;
+  const viewOnce = document.getElementById('viewOnceToggle').checked; 
+
+    let content;
   if (currentSenderMsgType === 'text') {
     content = document.getElementById('senderTextContent').value.trim();
-    if (!content) {
-      showToast('Please enter a message!', 'error');
-      return;
-    }
+    if (!content) { showToast('Please enter a message!', 'error'); return; }
   } else {
     content = document.getElementById('senderQuestionContent').value.trim();
-    if (!content) {
-      showToast('Please enter a question!', 'error');
+    if (!content) { showToast('Please enter a question!', 'error'); return; }
+  }
+
+    if (USE_API) {
+    try {
+      const body = {
+        m_type: currentSenderMsgType,
+        uni_id: universeId,
+        unl_rad: radius,
+        latitude: senderSelectedLocation.lat,
+        longitude: senderSelectedLocation.lng,
+        view_once: viewOnce,
+        m_txt: content
+      };
+
+      if (currentSenderMsgType === 'poll') {
+        const answerInputs = document.querySelectorAll('.answer-option');
+        const pollOptions = Array.from(answerInputs).map(i => i.value.trim()).filter(v => v);
+        body.poll = { p_txt: content, poll_options: pollOptions };
+      }
+        const res = await fetch(`${API}/messages`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': currentUser.token
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        showToast(`❌ ${data.error}`, 'error');
+        return;
+      }
+
+    } catch (err) {
+      showToast('Server not reachable', 'error');
       return;
     }
   }
-
   // 1. creating message object
 
-  const viewOnce = document.getElementById('viewOnceToggle').checked;
-  const newMsg = {
+    const newMsg = {
     m_id: Date.now(),
     m_type: currentSenderMsgType,
     latitude: senderSelectedLocation.lat,
@@ -935,16 +986,14 @@ function submitMessageFromSidebar() {
     uni_id: universeId,
     distance: 0,
     unl_rad: radius,
-    view_once: viewOnce 
+    view_once: viewOnce
   };
 
   // 2. creating marker
-  const marker = L.marker([senderSelectedLocation.lat, senderSelectedLocation.lng], {
+  const marker = L.marker([newMsg.latitude, newMsg.longitude], {
     icon: L.divIcon({
       html: `<div style="font-size:1.4rem">${typeIcon(currentSenderMsgType)}</div>`,
-      className: '',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15]
+      className: '', iconSize: [30, 30], iconAnchor: [15, 15]
     })
   }).addTo(map).bindPopup(`
     <div style="font-family:'DM Sans',sans-serif">
@@ -953,27 +1002,19 @@ function submitMessageFromSidebar() {
     </div>
   `).openPopup();
 
-  marker.on('click', () => {
-    marker.openPopup();
-    showMessageDetail(newMsg);
-  });
+  marker.on('click', () => { marker.openPopup(); showMessageDetail(newMsg); });
   messageMarkers.push(marker);
 
   // 3. Buffer circle for unlock radius
-  const circle = L.circle([senderSelectedLocation.lat, senderSelectedLocation.lng], {
-    radius: radius,
-    fillColor: '#8f2de4',
-    fillOpacity: 0.1,
-    color: '#8f2de4',
-    weight: 1,
-    dashArray: '5, 5'
+  const circle = L.circle([newMsg.latitude, newMsg.longitude], {
+    radius: radius, fillColor: '#8f2de4', fillOpacity: 0.1,
+    color: '#8f2de4', weight: 1, dashArray: '5, 5'
   }).addTo(map);
 
-  // 4. saf
   messageCircles[newMsg.m_id] = circle;
   allMessages.push(newMsg);
 
-  // 5. Reset form
+  // 4. Reset form
   document.getElementById('senderTextContent').value = '';
   document.getElementById('senderQuestionContent').value = '';
   senderSelectedLocation = null;
@@ -1111,10 +1152,9 @@ async function submitCreateUniverse() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        universe_name: name,
-        description: desc,
-        is_public: newUniversePublic,
-        creator_id: currentUser?.id || 1001
+        uni_name: name,
+        access: !newUniversePublic, 
+        descri: desc,
       })
     });
     
