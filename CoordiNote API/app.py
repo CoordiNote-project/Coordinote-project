@@ -162,7 +162,11 @@ def login_user():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT us_id, pwd FROM users WHERE us_name = %s;", (username,))
+    cur.execute("""
+    SELECT us_id, pwd 
+        FROM users 
+        WHERE LOWER(us_name) = LOWER(%s);
+    """, (username,))
     user = cur.fetchone()
     release_db_connection(conn)
 
@@ -304,7 +308,7 @@ def join_universe():
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
 
-    uni_name = data.get("uni_name").stip()
+    uni_name = data.get("uni_name").strip()
     if not uni_name:
         return jsonify({"error": "uni_name required"}), 400
 
@@ -315,7 +319,7 @@ def join_universe():
         # does the universe exist?
         cur.execute("""
             SELECT uni_id FROM universes
-            WHERE uni_name = %s;
+            WHERE LOWER(uni_name) = LOWER(%s);
         """, (uni_name,))
         universe = cur.fetchone()
 
@@ -453,7 +457,7 @@ def messages():
 
     try:
         cur.execute("""
-            SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, poll, location_id
+            SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, poll, location_id
             FROM messages m
             JOIN user_univ uu ON m.uni_id = uu.uni_id
             WHERE m.uni_id = %s
@@ -537,7 +541,7 @@ def open_message(m_id):
 
     conn = get_db_connection()
     cur = conn.cursor()
-
+    
     try:
         # GET message
         cur.execute("""
@@ -597,6 +601,13 @@ def open_message(m_id):
 # Nearby messages route
 @app.route("/messages/nearby", methods=["GET"])
 def nearby_messages():
+    
+    # Get user from token
+    us_id, error = get_current_user()
+    if error:
+        return jsonify({"error": error}), 401
+    
+    # Get query parameters
     lat = request.args.get("lat")
     lon = request.args.get("lon")
     uni_id = request.args.get("uni_id")
