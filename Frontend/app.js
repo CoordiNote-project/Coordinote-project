@@ -21,6 +21,7 @@ let allPOIs = [];
 let isRegisterMode = false;  
 let hiddenUniverses = []; // universes the user has "left"
 let messageCircles = {}; // saves circles per m_id
+let seenMessages = new Set(); // saves seen message IDs
 
 // 
 //  START APP (when page loads)
@@ -262,14 +263,6 @@ function setupEventListeners() {
     showToast('Refreshed! 🔄');
   });
 
-  // Universe dropdown
-  const universeDropdown = document.getElementById('universeDropdown');
-  if (universeDropdown) {
-    universeDropdown.addEventListener('change', (e) => {
-      filterMessagesByUniverse(e.target.value);
-    });
-  }
-
   // Logout button
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
@@ -399,7 +392,6 @@ async function loadMessages() {
   if (USE_API && currentUser.location) {
     try {
       const { lat, lng } = currentUser.location;
-      const uniId = document.getElementById('universeDropdown')?.value;
       const res = await fetch(
         `${API}/messages/nearby?lat=${lat}&lon=${lng}&uni_id=${uniId}`,
         { headers: { 'Authorization': currentUser.token } }
@@ -425,9 +417,12 @@ function renderMessageMarkers(messages) {
 
   messages.forEach(msg => {
     if (!msg.latitude || !msg.longitude) return;
-   const marker = L.marker([msg.latitude, msg.longitude], {
+   const isSeen = seenMessages.has(msg.m_id);
+const marker = L.marker([msg.latitude, msg.longitude], {
   icon: L.divIcon({
-    html: `<div style="font-size:1.4rem">${typeIcon(msg.m_type)}</div>`,
+    html: `<div style="font-size:1.4rem;${isSeen ? 'filter:grayscale(100%);opacity:0.5' : ''}">
+             ${typeIcon(msg.m_type)}
+           </div>`,
     className: '',
     iconSize: [30, 30],
     iconAnchor: [15, 15]
@@ -459,6 +454,8 @@ function renderMessageMarkers(messages) {
 }
 
 function showMessageDetail(msg) {
+   seenMessages.add(msg.m_id);
+  updateMarkerAppearance(msg.m_id);
   const panel = document.getElementById('sidePanel');
   const panelBadge = document.getElementById('panelBadge');
   const panelBody = document.getElementById('panelBody');
@@ -533,7 +530,21 @@ function showMessageDetail(msg) {
   panelBody.innerHTML = body;
   panel.classList.add('active');
 }
-
+function updateMarkerAppearance(msgId) {
+  const idx = allMessages.findIndex(m => m.m_id === msgId);
+  if (idx === -1) return;
+  
+  const marker = messageMarkers[idx];
+  if (!marker) return;
+  
+  // Grauer Icon
+  marker.setIcon(L.divIcon({
+    html: `<div style="font-size:1.4rem;filter:grayscale(100%);opacity:0.5">🎁</div>`,
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  }));
+}
 function closeSidePanel() {
   const panel = document.getElementById('sidePanel');
   if (panel) panel.classList.remove('active');
@@ -621,18 +632,6 @@ function fillUniverseDropdowns() {
       `<option value="${u.uni_id}">${u.uni_name}</option>`
     ).join('');
   }
-
-  // Universe list in sidebar
-  const universeList = document.getElementById('universeList');
-  if (universeList) {
-    universeList.innerHTML = allUniverses.slice(0, 5).map(u => `
-      <div class="uni-item">
-        <div class="uni-dot" style="background:${getUniColor(u.uni_id)}"></div>
-        <div class="uni-name">${u.uni_name}</div>
-        <div class="uni-count">${u.message_count || 0}</div>
-      </div>
-    `).join('');
-  }
 }
 
 // 
@@ -709,13 +708,8 @@ function renderPOIMarkers(pois) {
     poiMarkers.push(marker);
   });
 }
-// 
+
 //  CREATE MESSAGE
-//
-function openCreateModal() {
-  const modal = document.getElementById('createModal');
-  if (modal) modal.classList.remove('hidden');
-}
 
 function closeCreateModal() {
   const modal = document.getElementById('createModal');
@@ -824,17 +818,9 @@ async function submitMessage() {
   }
 }
 
-// ═══════════════════════════════════════════════
+// 
 //  HELPERS
-// ═══════════════════════════════════════════════
-function updateStats() {
-  const statMessages = document.getElementById('statMessages');
-  const statPOIs = document.getElementById('statPOIs');
-  
-  if (statMessages) statMessages.textContent = allMessages.length;
-  if (statPOIs) statPOIs.textContent = allPOIs.length;
-}
-
+// 
 function showToast(msg, type = '') {
   const toast = document.getElementById('toast');
   if (!toast) return;
@@ -848,10 +834,6 @@ function showToast(msg, type = '') {
 
 function typeIcon(type) {
   return { text: '🎁', poll: '🎁' }[type] || '📍';
-}
-
-function typeColor(type) {
-  return { text: '#f5a623', yesno: '#2de4c8', poll: '#a78bfa' }[type] || '#6b7280';
 }
 
 function formatDist(meters) {
@@ -1005,12 +987,6 @@ function rejoinUniverse(uniId, event) {
   fillUniverseDropdowns();
   showToast('Universe rejoined! 🌐', 'success');
 }
-
-// Open create universe modal (you can build this later)
-function openCreateUniverseModal() {
-  showToast('Create Universe modal - coming soon!');
-}
-
 //
 //  SENDER VIEW FUNCTIONS
 // 
@@ -1230,7 +1206,10 @@ function closeModalOnBg(event) {
     } else if (clickedModal.id === 'discoverModal') {
       closeDiscoverModal();
     }
+    else if (clickedModal.id === 'fundModal') {
+  closeFundModal();
   }
+}
 }
 
 function setUniversePrivacy(isPublic, btn) {
@@ -1448,4 +1427,17 @@ function joinUniverse(uniId) {
   fillUniverseDropdowns();
   closeDiscoverModal();
   showToast('Universe joined! 🌍', 'success');
+}
+
+function openFundModal() {
+  document.getElementById('fundModal').classList.remove('hidden');
+}
+
+function closeFundModal() {
+  document.getElementById('fundModal').classList.add('hidden');
+}
+
+function updateViewOnceIcon(checkbox) {
+  const icon = document.getElementById('viewOnceIcon');
+  icon.textContent = checkbox.checked ? '🫣' : '👁️';
 }
