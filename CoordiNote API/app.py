@@ -8,7 +8,6 @@ from psycopg2.extras import RealDictCursor # This allows us to get query results
 from psycopg2.pool import SimpleConnectionPool # This allows us to create a pool of database connections that can be reused, improving performance
 from psycopg2 import errors # This module contains exceptions that can be raised by psycopg2, we're using it to handle duplicates uni_name error 
 from passlib.hash import bcrypt # This is a library for hashing passwords securely, we will use it to hash user passwords before storing them in the database
-# from utils import format_geojson
 import uuid # for generating unique identifiers, we will use it to generate unique IDs for users and notes
 from datetime import datetime, timedelta # for working with dates and times, we will use it to set expiration times for authentication tokens
 from utils import format_geojson
@@ -551,7 +550,6 @@ def nearby_messages():
     max_lat  = request.args.get("max_lat")
     min_lon  = request.args.get("min_lon")
     max_lon  = request.args.get("max_lon")
-    uni_name = request.args.get("uni_name")  # optional filter to only get messages from a specific universe
 
     if not all([min_lat, max_lat, min_lon, max_lon]):
         return jsonify({"error": "min_lat, max_lat, min_lon, max_lon are required"}), 400
@@ -587,9 +585,10 @@ def nearby_messages():
         release_db_connection(conn)
 
 # DELETE message route --> should this be done in the database??
+# Only the creator can delete, within 30 minutes of posting.
+# poll_options and poll_votes are cleaned up automatically by ON DELETE CASCADE in the DB.
 @app.route("/messages/<int:m_id>", methods=["DELETE"])
 def delete_message(m_id):
-
     # Get current user from token
     us_id, error = get_current_user()
     if error:
@@ -601,7 +600,7 @@ def delete_message(m_id):
     try:
         # Fetch message info
         cur.execute("""
-            SELECT creator, crt_time
+            SELECT creator, crt_time, location_id
             FROM messages
             WHERE m_id = %s;
         """, (m_id,))
@@ -615,28 +614,19 @@ def delete_message(m_id):
         if message["creator"] != us_id:
             return jsonify({"error": "You can only delete your own messages"}), 403
 
-        # Check 30-minute time limit --> SHOULD WE CHANGE THAT TO LESS?
-        from datetime import datetime, timedelta # can I skip this if it's already imported at the top?
-
-        created_at = message["crt_time"]
-        time_limit = created_at + timedelta(minutes=30)
-
+        time_limit = message["crt_time"] + timedelta(minutes=30)
         if datetime.utcnow() > time_limit:
-            return jsonify({
-                "error": "Delete time window expired (30 minutes)"
-            }), 403
+            return jsonify({"error": "Delete time window expired (30 minutes)"}), 403
 
-        # Delete message
-        cur.execute("""
-            DELETE FROM messages
-            WHERE m_id = %s;
-        """, (m_id,))
+        # Delete message — poll_options and poll_votes cascade automatically
+        cur.execute("DELETE FROM messages WHERE m_id = %s;", (m_id,))
+
+        # Clean up the orphaned location row (no cascade possible here — FK goes the other way)
+        if message["location_id"]:
+            cur.execute("DELETE FROM locations WHERE location_id = %s;", (message["location_id"],))
 
         conn.commit()
-
-        return jsonify({
-            "message": "Message deleted successfully"
-        }), 200
+        return jsonify({"message": "Message deleted successfully"}), 200
 
     except Exception as e:
         conn.rollback()
@@ -646,22 +636,22 @@ def delete_message(m_id):
         release_db_connection(conn)
 
 
-# Mark message as opened per user (token required)
+# MARK message AS OPENED per user (token required)
+# For view_once: records in seen table, blocks on second open
+# For polls: returns options if not yet voted, results if already voted
+# For text: just returns m_txt
 @app.route("/messages/<int:m_id>/open", methods=["POST"])
 def open_message(m_id):
-
-    # Get user from token
     us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
 
     conn = get_db_connection()
     cur = conn.cursor()
-    
+
     try:
-        # GET message
         cur.execute("""
-            SELECT m_id, m_txt, view_once, uni_id
+            SELECT m_id, m_txt, m_type, view_once, uni_id
             FROM messages
             WHERE m_id = %s
         """, (m_id,))
@@ -675,35 +665,75 @@ def open_message(m_id):
             SELECT 1 FROM user_univ
             WHERE us_id = %s AND uni_id = %s
         """, (us_id, message["uni_id"]))
-
         if not cur.fetchone():
             return jsonify({"error": "Not allowed"}), 403
 
-        # If message is view-once
+        # Handle view_once: applies to both text and polls
         if message["view_once"]:
-
-            # Check if already seen
             cur.execute("""
                 SELECT 1 FROM seen
                 WHERE m_id = %s AND us_id = %s
             """, (m_id, us_id))
-            already_seen = cur.fetchone()
-
-            if already_seen:
+            if cur.fetchone():
                 return jsonify({"status": "already viewed"}), 403
 
-            # First time opening -> insert into seen
+            # First open: record in seen
             cur.execute("""
                 INSERT INTO seen (m_id, us_id)
                 VALUES (%s, %s)
             """, (m_id, us_id))
-
             conn.commit()
 
-        # Return message content
+        # POLL TYPE of message
+        if message["m_type"] == "poll":
+            cur.execute("""
+                SELECT 1 FROM poll_votes
+                WHERE us_id = %s AND m_id = %s;
+            """, (us_id, m_id))
+            already_voted = cur.fetchone() is not None
+
+            if already_voted:
+                # RETURN RESULTS with vote counts
+                cur.execute("""
+                    SELECT po.option_id, po.option_text,
+                           COUNT(pv.vote_id) AS vote_count
+                    FROM poll_options po
+                    LEFT JOIN poll_votes pv ON po.option_id = pv.option_id
+                    WHERE po.m_id = %s
+                    GROUP BY po.option_id, po.option_text
+                    ORDER BY po.option_id;
+                """, (m_id,))
+                results = cur.fetchall()
+                total = sum(r["vote_count"] for r in results)
+                return jsonify({
+                    "status": "opened",
+                    "m_type": "poll",
+                    "already_voted": True,
+                    "p_txt": message["m_txt"],
+                    "total_votes": total,
+                    "results": list(results)
+                }), 200
+
+            # Not yet voted: RETURN OPTIONS so user can vote
+            cur.execute("""
+                SELECT option_id, option_text
+                FROM poll_options
+                WHERE m_id = %s
+                ORDER BY option_id;
+            """, (m_id,))
+            return jsonify({
+                "status": "opened",
+                "m_type": "poll",
+                "already_voted": False,
+                "p_txt": message["m_txt"],
+                "poll_options": list(cur.fetchall())
+            }), 200
+
+        # Text message
         return jsonify({
             "status": "opened",
-            "message": message["m_txt"]
+            "m_type": "text",
+            "m_txt": message["m_txt"]
         }), 200
 
     except Exception as e:
@@ -713,10 +743,9 @@ def open_message(m_id):
     finally:
         release_db_connection(conn)
 
-#  POLLS – POST /poll/vote
-#  User votes on a poll option.
-#  One vote per user per poll enforced by DB constraint:
-#    UNIQUE (us_id, m_id) on poll_votes
+# POLLS: POST /poll/vote
+# User votes on a poll option.
+# One vote per user per poll enforced by DB constraint:
 @app.route("/poll/vote", methods=["POST"])
 def vote_poll():
 
@@ -770,7 +799,7 @@ def vote_poll():
         if cur.fetchone():
             return jsonify({"error": "You have already voted in this poll"}), 409
 
-        # Insert vote
+        # Insert vote - should be by clicking!!
         cur.execute("""
             INSERT INTO poll_votes (option_id, us_id, m_id)
             VALUES (%s, %s, %s);
@@ -787,10 +816,10 @@ def vote_poll():
         release_db_connection(conn)
 
 
-# POLLS – GET /poll/<m_id>
-# Returns p_txt + all poll_options / option_text.
-#  Used to display the poll BEFORE the user has voted.
-#  If user already voted, tells them to fetch results instead.
+# POLLS: GET /poll/<m_id>
+# Returns p_txt + all poll_options
+# Used to display the poll BEFORE the user has voted.
+# If user already voted, tells them to fetch results instead.
 
 @app.route("/poll/<int:m_id>", methods=["GET"])
 def get_poll(m_id):
@@ -831,7 +860,7 @@ def get_poll(m_id):
                 "error": "Already voted. Fetch results at GET /poll/<m_id>/results"
             }), 403
 
-        # Get options without vote counts
+        # Get poll options
         cur.execute("""
             SELECT option_id, option_text
             FROM poll_options
@@ -841,9 +870,9 @@ def get_poll(m_id):
         options = cur.fetchall()
 
         return jsonify({
-            "m_id":         message["m_id"],
-            "p_txt":     message["p_txt"],
-            "crt_time":     str(message["crt_time"]),
+            "m_id": message["m_id"],
+            "p_txt": message["p_txt"],
+            "crt_time": str(message["crt_time"]),
             "poll_options": list(options)
         }), 200
 
@@ -854,13 +883,12 @@ def get_poll(m_id):
         release_db_connection(conn)
 
 
-# POLLS  –  GET /poll/<m_id>/results
+# POLLS: GET /poll/<m_id>/results
 # Returns vote counts per option + total.
 # Only accessible AFTER the current user has voted.
 
 @app.route("/poll/<int:m_id>/results", methods=["GET"])
 def poll_results(m_id):
-
     us_id, error = get_current_user()
     if error:
         return jsonify({"error": error}), 401
