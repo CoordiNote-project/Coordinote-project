@@ -6,333 +6,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CoordiNote</title>
-<!-- Google Fonts, text type plus loaded font weights, headings, logo text, big titles, highlighted UI elements -->
+<!-- this is the google Fonts, text type plus loaded font weights, headings, logo text, big titles, highlighted UI elements -->
 
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
-  <!-- Leaflet (the map library) -->
+  <!-- Leaflet for the map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <link rel="stylesheet" href="style.css" />
 </head>
 
-<script>
-function showMain() {
-  document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("mainScreen").style.display = "block";
-}
-</script>
 <body>
-<div id="app">
-
-    <!-- MODAL – About -->
-<div id="aboutModal" class="modal-backdrop hidden" onclick="closeModalOnBg(event)">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <h2>ℹ️ About CoordiNote</h2>
-      <button class="modal-close" onclick="closeAboutModal()">✕</button>
-    </div>
-    <div class="modal-form">
-      <p style="color:#6b7280;font-size:0.9rem">Info about group members and project details.</p>
-    </div>
-  </div>
-</div>
-
-    <!-- discover universes -->
-<div id="discoverModal" class="modal-backdrop hidden" onclick="closeModalOnBg(event)">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <h2>🌍 Discover Universes</h2>
-      <button class="modal-close" onclick="closeDiscoverModal()">✕</button>
-    </div>
-    <div class="modal-form">
-      <div id="discoverList"></div>
-    </div>
-  </div>
-</div>
-  <!-- building the Sidebar -->
-<!-- NEW SIDEBAR WITH TWO VIEWS -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-resizer" id="sidebarResizer"></div>
-  
-  <!-- ═══ SIDEBAR HEADER (always visible) ═══ -->
-  <div class="sidebar-header">
-
-  <!-- ═══ SIDEBAR HEADER (always visible) ═══ -->
-  <div class="sidebar-header">
-    <div class="sidebar-logo">
-      <div class="logo-icon">📍</div>
-      <span class="logo-text">Coordi<em>Note</em></span>
-    </div>
-  </div>
-
-  <!-- ═══ VIEW TOGGLE TABS ═══ -->
-  <div class="view-tabs">
-    <button class="view-tab active" id="tabReceiver" onclick="switchView('receiver')">
-      <span class="tab-icon">📥</span>
-      <span class="tab-label">Receive</span>
-    </button>
-    <button class="view-tab" id="tabSender" onclick="switchView('sender')">
-      <span class="tab-icon">📤</span>
-      <span class="tab-label">Send</span>
-    </button>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════
-       📥 RECEIVER VIEW (default visible)
-  ═══════════════════════════════════════════════ -->
-  <div class="sidebar-view active" id="viewReceiver">
-    
-    <!-- Search & Create Universes -->
-
-    <div class="action-row">
-  <input type="text" id="searchUniverse" class="search-input-small" 
-         placeholder="🔍 Search universes..." oninput="searchUniverses(this.value)"/>
-  <button class="btn-icon-small" id="btnCreateUniverse" 
-          onclick="openCreateUniverseModal()" title="Create Universe">
-    ➕
-  </button>
-  <!-- ← NEU -->
-  <button class="btn-icon-small" onclick="openDiscoverModal()" title="Discover Universes">
-    🌍
-  </button>
-</div>
-
-    <!-- Universe List -->
-    <div class="section-title">My Universes</div>
-    <div class="universe-list-new" id="universeListReceiver">
-      <!-- Filled by JavaScript -->
-      <div class="uni-skeleton"></div>
-      <div class="uni-skeleton"></div>
-      <div class="uni-skeleton"></div>
-    </div>
-
-     <!-- Delete Universe - leave Universe -->
-   <button class="btn-icon-small danger"
-          id="btnDeleteUniverse"
-          onclick="deleteSelectedUniverse()"
-          title="Delete Universe">
-    
-  </button>
-
-  </div>
-
-  <!-- SENDER VIEW (hidden by default) -->
-  <div class="sidebar-view" id="viewSender">
-    
-    <div class="section-title">Create New Message</div>
-
-    <!-- Message Type -->
-    <div class="form-group-compact">
-      <label class="field-label-small">Type</label>
-      <div class="type-pills">
-  <button class="type-pill active" onclick="setSenderMsgType('text', this)">📝 Text</button>
-<button class="type-pill" onclick="setSenderMsgType('poll', this)">📊 Poll</button>
-      </div>
-    </div>
-
-    <!-- Universe Selection -->
-    <div class="form-group-compact">
-      <label class="field-label-small">Universe</label>
-      <select id="senderUniverseSelect" class="field-input-compact">
-        <!-- Filled by JS -->
-      </select>
-    </div>
-
-    <!-- Message Content -->
-    <div class="form-group-compact" id="senderTextGroup">
-      <label class="field-label-small">Message</label>
-      <textarea id="senderTextContent" class="field-input-compact field-ta-compact" 
-                rows="3" placeholder="Write your message..."></textarea>
-    </div>
-
- <div class="form-group-compact hidden" id="senderQuestionGroup">
-  <label class="field-label-small">Question</label>
-  <input type="text" id="senderQuestionContent" class="field-input-compact"
-         placeholder="Enter your question..."/>
-  
-  <label class="field-label-small" style="margin-top:10px">Answer Options</label>
-<!-- so that the first two options are wrapped und display:none are and only when a third is being added all are visible-->
-<div id="answersList">
-  <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
-    <input type="text" class="field-input-compact answer-option" placeholder="Option 1" style="flex:1"/>
-    <button onclick="removeAnswerField(this)" style="background:none;border:1px solid #ff4d6d;border-radius:6px;padding:4px 8px;color:#ff4d6d;cursor:pointer;flex-shrink:0;display:none">✕</button>
-  </div>
-  <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
-    <input type="text" class="field-input-compact answer-option" placeholder="Option 2" style="flex:1"/>
-    <button onclick="removeAnswerField(this)" style="background:none;border:1px solid #ff4d6d;border-radius:6px;padding:4px 8px;color:#ff4d6d;cursor:pointer;flex-shrink:0;display:none">✕</button>
-  </div>
-</div>
-  <button onclick="addAnswerField()" 
-          style="background:none;border:1px dashed #2d3048;border-radius:8px;
-                 padding:6px;color:#6b7280;cursor:pointer;width:100%;margin-top:4px">
-    ➕ Add option
-  </button>
-</div>
-
-    <!-- Location Selection -->
-    <div class="section-title" style="margin-top:16px">📍 Location</div>
-    
-    <div class="location-options">
-      <button class="location-btn active" id="btnDropPin" onclick="setLocationMode('pin')">
-        <span>📌</span>
-        <span>Drop Pin</span>
-      </button>
-      <button class="location-btn" id="btnSearchLocation" onclick="setLocationMode('search')">
-        <span>🔍</span>
-        <span>Search</span>
-      </button>
-    </div>
-
-    <!-- Location Search (hidden by default) -->
-    <div class="location-search hidden" id="locationSearchBox">
-      <input type="text" id="locationSearchInput" class="search-input-small"
-             placeholder="Search location..." onkeyup="searchLocation(event)"/>
-      <div id="locationResults" class="location-results"></div>
-    </div>
-
-    <!-- Selected Location Display -->
-    <div class="location-display" id="senderLocationDisplay">
-      <div class="location-icon">🖱️</div>
-      <div class="location-text">Click on map to set location</div>
-    </div>
-
-<!-- Unlock Radius -->
-    <div class="form-group-compact">
-      <label class="field-label-small">
-        Unlock Radius: <strong id="senderRadiusLabel">50m</strong>
-      </label>
-      <input type="range" id="senderRadiusSlider" min="20" max="500" value="50" 
-             class="slider" oninput="updateSenderRadius(this.value)"/>
-    </div>
-
-    <!-- View Once Toggle -->
-<!-- View Once Toggle -->
-<div class="form-group-compact" style="display:flex;align-items:center;justify-content:space-between">
-  <label class="field-label-small" style="margin:0">
-    <span id="viewOnceIcon">👁️</span> View Once
-    <div style="font-size:0.7rem;color:#6b7280;font-weight:400">Disappears after first read</div>
-  </label>
-  <label class="toggle-switch">
-    <input type="checkbox" id="viewOnceToggle" onchange="updateViewOnceIcon(this)">
-    <span class="toggle-slider"></span>
-  </label>
-</div>
-    <!-- Submit Button -->
-    <button class="btn-submit-sidebar" onclick="submitMessageFromSidebar()">
-      Drop Message 📍
-    </button>
-
-  </div>  
-
-  <!-- ═══ USER ROW (always at bottom) ═══ -->
-  <div class="user-row">
-    <div class="avatar" id="userAvatar">WK</div>
-    <div class="user-info">
-      <div class="user-name" id="userName">wilmakahl</div>
-      <div class="user-sub">Logged in</div>
-    </div>
-    <button class="icon-btn" id="logoutBtn" title="Logout">↩</button>
-  </div>
-
-</aside>
-
-  <!-- map -->
-  <div class="map-wrap">
-    <div id="map"></div>
-
-    <!-- info button -->
-<button onclick="openAboutModal()" 
-        style="position:absolute;bottom:24px;right:24px;z-index:1000;
-               background:#1e2030;border:1px solid #2d3048;border-radius:50%;
-               width:40px;height:40px;color:white;font-size:1.1rem;
-               cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3)">
-  ℹ️
-
-</button>
-    <!-- Top controls -->
-    <div class="map-toolbar">
-      <button class="tool-btn active" id="btnMessages" title="Show Messages">🎁</button>
-      <button class="tool-btn" id="btnPOIs" title="Show POIs">🗺️</button>
-      <button class="tool-btn" id="btnLocate" title="My Location">📍</button>
-      <button class="tool-btn" id="btnRefresh" title="Refresh">🔄</button>
-    </div>
-
-  <!-- SIDE PANEL (message detail)-->
-  <div class="side-panel" id="sidePanel">
-    <div class="panel-header">
-      <button class="back-btn" id="closePanelBtn">← Back</button>
-      <span class="panel-badge" id="panelBadge">TEXT</span>
-    </div>
-    <div class="panel-body" id="panelBody">
-      <!-- filled by JS -->
-    </div>
-  </div>
-
-  <!-- MODAL – Create Message -->
-  <div class="modal-backdrop hidden" id="createModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>📝 New Message</h2>
-        <button class="modal-close" id="closeModalBtn">✕</button>
-      </div>
-
-      <!-- Type tabs -->
-      <div class="type-tabs">
-        <button class="type-tab active" data-type="text">
-          <span>💬</span> Text
-        </button>
-        <button class="type-tab" data-type="yesno">
-          <span>❓</span> Yes / No
-        </button>
-        <button class="type-tab" data-type="poll">
-          <span>📊</span> Poll
-        </button>
-      </div>
-
-      <!-- Form -->
-      <div class="modal-form">
-
-        <!-- Universe -->
-        <label class="field-label">Universe</label>
-        <select id="modalUniverse" class="field-input"></select>
-
-        <!-- Text content (text only) -->
-        <div id="textSection">
-          <label class="field-label">Message</label>
-          <textarea id="modalText" class="field-input field-ta" rows="4"
-            placeholder="Write your message…"></textarea>
-        </div>
-
-        <!-- Question (yesno / poll) -->
-        <div id="questionSection" class="hidden">
-          <label class="field-label">Question</label>
-          <input type="text" id="modalQuestion" class="field-input"
-            placeholder="Enter your question…" />
-        </div>
-
-        <!-- Radius -->
-        <label class="field-label">
-          Unlock Radius — <strong id="radiusDisplay">50 m</strong>
-        </label>
-        <input type="range" id="radiusSlider" min="10" max="500"
-          value="50" class="slider" />
-
-        <!-- Location confirmation -->
-        <div class="location-chip" id="locationChip">
-          🖱️ Click on the map to set location first
-        </div>
-
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn-cancel" id="cancelModalBtn">Cancel</button>
-        <button class="btn-submit" id="submitMessageBtn">Drop Message 📍</button>
-      </div>
-    </div>
-  </div>
-
-  </div> <!-- end of app -->
-
 <!-- MODAL – Login -->
 <div class="modal-backdrop" id="loginModal">
   <div class="modal modal-sm">
@@ -363,6 +46,252 @@ function showMain() {
     </div>
   </div>
 </div>
+
+<div id="app" class="hidden">
+
+    <!-- MODAL – About -->
+<div id="aboutModal" class="modal-backdrop hidden" onclick="closeModalOnBg(event)">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>ℹ️ About CoordiNote</h2>
+      <button class="modal-close" onclick="closeAboutModal()">✕</button>
+    </div>
+    <div class="modal-form">
+      <p style="color:#6b7280;font-size:0.9rem">Info about group members and project details.</p>
+    </div>
+  </div>
+</div>
+
+    <!-- discover universes -->
+<div id="discoverModal" class="modal-backdrop hidden" onclick="closeModalOnBg(event)">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>🌍 Discover Universes</h2>
+      <button class="modal-close" onclick="closeDiscoverModal()">✕</button>
+    </div>
+    <div class="modal-form">
+      <div id="discoverList"></div>
+    </div>
+  </div>
+</div>
+
+  <!-- Sidebar -->
+<!-- sidebar with sender and receiver views -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-resizer" id="sidebarResizer"></div>
+
+  <!-- SIDEBAR HEADER -->
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📍</div>
+      <span class="logo-text">Coordi<em>Note</em></span>
+    </div>
+  </div>
+
+  <!-- VIEW TOGGLE TABS -->
+  <div class="view-tabs">
+    <button class="view-tab active" id="tabReceiver" onclick="switchView('receiver')">
+      <span class="tab-icon">📥</span>
+      <span class="tab-label">Receive</span>
+    </button>
+    <button class="view-tab" id="tabSender" onclick="switchView('sender')">
+      <span class="tab-icon">📤</span>
+      <span class="tab-label">Send</span>
+    </button>
+  </div>
+
+  <!-- Receiver view sideebar -->
+  <div class="sidebar-view active" id="viewReceiver">
+    
+    <!-- Search & Create Universes -->
+
+    <div class="action-row">
+  <input type="text" id="searchUniverse" class="search-input-small" 
+         placeholder="🔍 Search universes..." oninput="searchUniverses(this.value)"/>
+  <button class="btn-icon-small" id="btnCreateUniverse" 
+          onclick="openCreateUniverseModal()" title="Create Universe">
+    ➕
+  </button>
+  <!-- public Universes list button -->
+  <button class="btn-icon-small" onclick="openDiscoverModal()" title="Discover Universes">
+    🌍
+  </button>
+</div>
+
+    <!-- Universe List -->
+    <div class="section-title">My Universes</div>
+    <div class="universe-list-new" id="universeListReceiver">
+      <!-- filled later with database data -->
+      <div class="uni-skeleton"></div>
+      <div class="uni-skeleton"></div>
+      <div class="uni-skeleton"></div>
+    </div>
+
+  </div>
+
+  <!-- Sender view sidebar -->
+  <div class="sidebar-view" id="viewSender">
+    
+    <div class="section-title">Create New Message</div>
+
+    <!-- Message Type:  text or poll -->
+    <div class="form-group-compact">
+      <label class="field-label-small">Type</label>
+      <div class="type-pills">
+  <button class="type-pill active" onclick="setSenderMsgType('text', this)">📝 Text</button>
+<button class="type-pill" onclick="setSenderMsgType('poll', this)">📊 Poll</button>
+      </div>
+    </div>
+
+    <!-- Universe Selection -->
+    <div class="form-group-compact">
+      <label class="field-label-small">Universe</label>
+      <select id="senderUniverseSelect" class="field-input-compact">
+        <!-- Filled by JS -->
+      </select>
+    </div>
+
+    <!-- Message Content -->
+    <div class="form-group-compact" id="senderTextGroup">
+      <label class="field-label-small">Message</label>
+      <textarea id="senderTextContent" class="field-input-compact field-ta-compact" 
+                rows="3" placeholder="Write your message..."></textarea>
+    </div>
+
+ <div class="form-group-compact hidden" id="senderQuestionGroup">
+  <label class="field-label-small">Question</label>
+  <input type="text" id="senderQuestionContent" class="field-input-compact"
+         placeholder="Enter your question..."/>
+  
+  <label class="field-label-small" style="margin-top:10px">Answer Options</label>
+
+<!-- so that the first two options are wrapped and display:none are and only when a third is being added all are visible-->
+<div id="answersList">
+  <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+    <input type="text" class="field-input-compact answer-option" placeholder="Option 1" style="flex:1"/>
+    <button onclick="removeAnswerField(this)" style="background:none;border:1px solid #ff4d6d;border-radius:6px;padding:4px 8px;color:#ff4d6d;cursor:pointer;flex-shrink:0;display:none">✕</button>
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+    <input type="text" class="field-input-compact answer-option" placeholder="Option 2" style="flex:1"/>
+    <button onclick="removeAnswerField(this)" style="background:none;border:1px solid #ff4d6d;border-radius:6px;padding:4px 8px;color:#ff4d6d;cursor:pointer;flex-shrink:0;display:none">✕</button>
+  </div>
+</div>
+  <button onclick="addAnswerField()" 
+          style="background:none;border:1px dashed #2d3048;border-radius:8px;
+                 padding:6px;color:#6b7280;cursor:pointer;width:100%;margin-top:4px">
+    ➕ Add option
+  </button>
+</div>
+
+    <!-- Location Selection- either drop your pin or search for POI -->
+    <div class="section-title" style="margin-top:16px">📍 Location</div>
+    
+    <div class="location-options">
+      <button class="location-btn active" id="btnDropPin" onclick="setLocationMode('pin')">
+        <span>📌</span>
+        <span>Drop Pin</span>
+      </button>
+      <button class="location-btn" id="btnSearchLocation" onclick="setLocationMode('search')">
+        <span>🔍</span>
+        <span>Choose from POI data</span>
+      </button>
+    </div>
+
+    <!-- Location Search (hidden by default) -->
+    <div class="location-search hidden" id="locationSearchBox">
+      <input type="text" id="locationSearchInput" class="search-input-small"
+             placeholder="Search location..." onkeyup="searchLocation(event)"/>
+      <div id="locationResults" class="location-results"></div>
+    </div>
+
+    <!-- Selected Location Display -->
+    <div class="location-display" id="senderLocationDisplay">
+      <div class="location-icon">🖱️</div>
+      <div class="location-text">Click on map to set location</div>
+    </div>
+
+<!-- Unlock Radius -->
+    <div class="form-group-compact">
+      <label class="field-label-small">
+        Unlock Radius: <strong id="senderRadiusLabel">50m</strong>
+      </label>
+      <input type="range" id="senderRadiusSlider" min="20" max="500" value="50" 
+             class="slider" oninput="updateSenderRadius(this.value)"/>
+    </div>
+
+<!-- View Once Toggle -->
+<div class="form-group-compact" style="display:flex;align-items:center;justify-content:space-between">
+  <label class="field-label-small" style="margin:0">
+    <span id="viewOnceIcon">👁️</span> View Once
+    <div style="font-size:0.7rem;color:#6b7280;font-weight:400">Disappears after first read</div>
+  </label>
+  <label class="toggle-switch">
+    <input type="checkbox" id="viewOnceToggle" onchange="updateViewOnceIcon(this)">
+    <span class="toggle-slider"></span>
+  </label>
+</div>
+    <!-- Submit the sidebar Button -->
+    <button class="btn-submit-sidebar" onclick="submitMessageFromSidebar()">
+      Drop Message 📍
+    </button>
+
+  </div>  
+
+  <!-- USER ROW (always at bottom) -->
+  <div class="user-row">
+    <div class="avatar" id="userAvatar">WK</div>
+    <div class="user-info">
+      <div class="user-name" id="userName">wilmakahl</div>
+      <div class="user-sub">Logged in</div>
+    </div>
+    <button class="icon-btn" id="logoutBtn" title="Logout">↩</button>
+  </div>
+
+</aside>
+
+  <!-- map frame -->
+  <div class="map-wrap">
+    <div id="map"></div>
+
+    <!-- info button about the team -->
+<button onclick="openAboutModal()" 
+        style="position:absolute;bottom:24px;right:24px;z-index:1000;
+               background:#1e2030;border:1px solid #2d3048;border-radius:50%;
+               width:40px;height:40px;color:white;font-size:1.1rem;
+               cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+  ℹ️
+
+</button>
+
+    <!-- gofundme button about the team -->
+ <button onclick="openFundModal()" 
+        style="position:absolute;bottom:24px;right:72px;z-index:1000;
+               background:#1e2030;border:1px solid #2d3048;border-radius:50%;
+               width:40px;height:40px;color:white;font-size:1.1rem;
+               cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+  💸
+</button>
+
+    <!-- Top controls in the map toolbar -->
+    <div class="map-toolbar">
+      <button class="tool-btn active" id="btnMessages" title="Show Messages">🎁</button>
+      <button class="tool-btn" id="btnPOIs" title="Show POIs">🗺️</button>
+      <button class="tool-btn" id="btnLocate" title="My Location">📍</button>
+      <button class="tool-btn" id="btnRefresh" title="Refresh">🔄</button>
+    </div>
+
+  <!-- SIDE PANEL for the message detail -->
+  <div class="side-panel" id="sidePanel">
+    <div class="panel-header">
+      <button class="back-btn" id="closePanelBtn">← Back</button>
+      <span class="panel-badge" id="panelBadge">TEXT</span>
+    </div>
+    <div class="panel-body" id="panelBody">
+         <!-- Filled dynamically with JS when a message is clicked -->
+    </div>
+  </div>
+
+  </div> <!-- end map-wrap -->
 
 <!-- MODAL – Create Universe -->
 <div id="createUniverseModal" class="modal-backdrop hidden">
@@ -401,8 +330,24 @@ function showMain() {
   </div>
 </div>
 
+<!-- MODAL – Go Fund Us -->
+<div id="fundModal" class="modal-backdrop hidden" onclick="closeModalOnBg(event)">
+  <div class="modal modal-sm" style="text-align:center">
+    <div class="modal-header" style="justify-content:center;border-bottom:1px solid #2d3048;padding-bottom:12px">
+      <h2>💸 Go Fund Us</h2>
+      <button class="modal-close" onclick="closeFundModal()">✕</button>
+    </div>
+    <div class="modal-form" style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <p style="color:#6b7280;font-size:0.9rem">Please support our developer team 🥹</p>
+      <p style="color:#2de4c8;font-size:0.8rem">Scan to donate 💰</p>
+    </div>
+  </div>
+</div>
+
   <!-- Toast notification -->
   <div class="toast hidden" id="toast"></div>
+
+  </div> <!-- end of app -->
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

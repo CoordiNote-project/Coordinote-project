@@ -24,9 +24,8 @@ TARGETS = {
     "bus_stop": 'node["highway"="bus_stop"](area.searchArea);'
 }
 
-# -------------------------------------------------------
-# EXTRACT + TRANSFORM 
 
+# EXTRACT + TRANSFORM 
 
 def fetch_osm_data(category, target_query):
     print(f"\nFetching '{category}' locations via OpenStreetMap...")
@@ -103,10 +102,8 @@ def extract_transform():
     print(f"\nTotal combined records to load: {len(final_gdf)}")
     return final_gdf
 
-# -------------------------------------------------------
-# LOAD
-# -------------------------------------------------------
 
+# LOAD
 def load_to_postgis(gdf):
     print("\nConnecting to the database...")
     engine = create_engine(
@@ -137,10 +134,7 @@ def load_to_postgis(gdf):
     except Exception as e:
         print(f"Error occurred while loading to database: {e}")
 
-# -------------------------------------------------------
 # MAIN ETL
-# -------------------------------------------------------
-
 def run_etl():
     try:
         gdf = extract_transform()
