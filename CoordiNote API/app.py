@@ -10,7 +10,6 @@ from psycopg2 import errors # This module contains exceptions that can be raised
 from passlib.hash import bcrypt # This is a library for hashing passwords securely, we will use it to hash user passwords before storing them in the database
 import uuid # for generating unique identifiers, we will use it to generate unique IDs for users and notes
 from datetime import datetime, timedelta # for working with dates and times, we will use it to set expiration times for authentication tokens
-from utils import format_geojson
 
 # Database configuration
 DB_CONFIG = {
@@ -557,7 +556,7 @@ def nearby_messages():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    try: # Resolve uni_name to uni_id and check membership if uni_name provided
+    try:
         cur.execute("""
             SELECT
                 m.m_id, m.m_type, m.unl_rad, m.crt_time, m.view_once, m.m_txt,
