@@ -102,7 +102,7 @@ def register_user():
     if not data:
         return jsonify({"error": "Invalid or missing JSON body"}), 400
 
-    username = data.get("username")
+    username = data.get("username").strip()
     password = data.get("password")
     repeat_password = data.get("repeat_password")
 
@@ -128,6 +128,13 @@ def register_user():
         us_id = cur.fetchone()["us_id"]
         conn.commit()
 
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        release_db_connection(conn)
+        return jsonify({
+            "error": "Username already exists"
+        }), 400
+    
     except Exception as e:
         conn.rollback()
         release_db_connection(conn)
@@ -147,7 +154,7 @@ def login_user():
     if not data:
         return jsonify({"error": "Invalid or missing JSON"}), 400
     
-    username = data.get("username")
+    username = data.get("username").strip()
     password = data.get("password")
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
@@ -155,7 +162,11 @@ def login_user():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT us_id, pwd FROM users WHERE us_name = %s;", (username,))
+    cur.execute("""
+    SELECT us_id, pwd 
+        FROM users 
+        WHERE LOWER(us_name) = LOWER(%s);
+    """, (username,))
     user = cur.fetchone()
     release_db_connection(conn)
 
@@ -194,7 +205,7 @@ def login_user():
     else:
         return jsonify({"error": "Username and password do not match. Try again."}), 401
 
-# show all public universes route
+# SHOW ALL PUBLIC UNIVERSES route
 @app.route("/universes/public", methods=["GET"])
 def public_universes():
 
@@ -213,7 +224,7 @@ def public_universes():
     finally:
         release_db_connection(conn)
 
-# Create universes route
+# CREATE UNIVERSES route
 @app.route("/universes", methods=["GET", "POST"])
 def universes():
 
@@ -227,53 +238,38 @@ def universes():
     try:
         # Create universe
         if request.method == "POST":
+
             data = request.get_json(silent=True)
             if not data:
                 return jsonify({"error": "Invalid JSON"}), 400
 
-            name = data.get("name")
+            name = data.get("name").strip()
             access = data.get("access", False)  # boolean: false = public and is default, true = private
             descri = data.get("descri")  # can be None
 
             if not name:
                 return jsonify({"error": "Insert universe name"}), 400
 
-            # Insert universe and get uni_id + check the uni_name is not already taken
-            try:
-                cur.execute("""
-                    INSERT INTO universes (uni_name, access, descri)
-                    VALUES (%s, %s, %s)
-                    RETURNING uni_id;
-                """, (name, access, descri))
+            # Insert universe and get uni_id
+            cur.execute("""
+                INSERT INTO universes (uni_name, access, descri)
+                VALUES (%s, %s, %s)
+                RETURNING uni_id;
+            """, (name, access, descri))
 
-                conn.commit()
+            uni_id = cur.fetchone()["uni_id"]
 
-                return jsonify({
-                    "message": "Universe created"
-                }), 201
-
-            except psycopg2.errors.UniqueViolation:
-                conn.rollback()
-                return jsonify({
-                    "error": "Universe name already exists. Be more original."
-                }), 400
-
-            except Exception as e:
-                conn.rollback()
-                return jsonify({"error": str(e)}), 500
-
-            # Add creator to user_univ
+            # Add creator to user_univ automatically
             cur.execute("""
                 INSERT INTO user_univ (us_id, uni_id)
                 VALUES (%s, %s)
                 ON CONFLICT DO NOTHING;
             """, (us_id, uni_id))
-            
+
             conn.commit()
 
             return jsonify({
-                "message": "Universe created",
-                "uni_id": uni_id
+                "message": "Universe created"
             }), 201
 
         # GET only universes the user belongs to
@@ -287,6 +283,12 @@ def universes():
         universes_list = cur.fetchall()
         return jsonify(universes_list)
         
+    except psycopg2.errors.UniqueViolation:
+                conn.rollback()
+                return jsonify({
+                    "error": "Universe name already exists. Be more original."
+                }), 400
+
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
@@ -294,7 +296,7 @@ def universes():
     finally:
         release_db_connection(conn)
 
-# Join universe route
+# JOIN UNIVERSE route
 @app.route("/universes/join", methods=["POST"])
 def join_universe():
 
@@ -306,7 +308,7 @@ def join_universe():
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
 
-    uni_name = data.get("uni_name")
+    uni_name = data.get("uni_name").strip()
     if not uni_name:
         return jsonify({"error": "uni_name required"}), 400
 
@@ -317,7 +319,7 @@ def join_universe():
         # does the universe exist?
         cur.execute("""
             SELECT uni_id FROM universes
-            WHERE uni_name = %s;
+            WHERE LOWER(uni_name) = LOWER(%s);
         """, (uni_name,))
         universe = cur.fetchone()
 
@@ -356,7 +358,7 @@ def leave_universe():
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
 
-    uni_name = data.get("uni_name")
+    uni_name = data.get("uni_name").strip()
     if not uni_name:
         return jsonify({"error": "uni_name required"}), 400
 
@@ -403,7 +405,7 @@ def messages():
         if not data:
             return jsonify({"error": "Invalid or missing JSON"}), 400
         
-        m_type = data.get("m_type")  # "text" or "poll"
+        m_type = data.get("m_type")  # "text" or "poll" --> by clicking on buttons
         unl_rad = data.get("unl_rad")
         view_once = data.get("view_once")  # true/false
         m_txt = data.get("m_txt")
@@ -455,7 +457,7 @@ def messages():
 
     try:
         cur.execute("""
-            SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, uni_id, poll, location_id
+            SELECT m_id, m_type, unl_rad, crt_time, view_once, m_txt, creator, poll, location_id
             FROM messages m
             JOIN user_univ uu ON m.uni_id = uu.uni_id
             WHERE m.uni_id = %s
@@ -464,6 +466,65 @@ def messages():
         messages_list = cur.fetchall()
 
         return jsonify(messages_list)
+
+    finally:
+        release_db_connection(conn)
+
+# DELETE message route --> should this be done in the database??
+@app.route("/messages/<int:m_id>", methods=["DELETE"])
+def delete_message(m_id):
+
+    # Get current user from token
+    us_id, error = get_current_user()
+    if error:
+        return jsonify({"error": error}), 401
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Fetch message info
+        cur.execute("""
+            SELECT creator, crt_time
+            FROM messages
+            WHERE m_id = %s;
+        """, (m_id,))
+
+        message = cur.fetchone()
+
+        if not message:
+            return jsonify({"error": "Message not found"}), 404
+
+        # Check ownership
+        if message["creator"] != us_id:
+            return jsonify({"error": "You can only delete your own messages"}), 403
+
+        # Check 30-minute time limit --> SHOULD WE CHANGE THAT TO LESS?
+        from datetime import datetime, timedelta # can I skip this if it's already imported at the top?
+
+        created_at = message["crt_time"]
+        time_limit = created_at + timedelta(minutes=30)
+
+        if datetime.utcnow() > time_limit:
+            return jsonify({
+                "error": "Delete time window expired (30 minutes)"
+            }), 403
+
+        # Delete message
+        cur.execute("""
+            DELETE FROM messages
+            WHERE m_id = %s;
+        """, (m_id,))
+
+        conn.commit()
+
+        return jsonify({
+            "message": "Message deleted successfully"
+        }), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
 
     finally:
         release_db_connection(conn)
@@ -480,7 +541,7 @@ def open_message(m_id):
 
     conn = get_db_connection()
     cur = conn.cursor()
-
+    
     try:
         # GET message
         cur.execute("""
@@ -540,6 +601,13 @@ def open_message(m_id):
 # Nearby messages route
 @app.route("/messages/nearby", methods=["GET"])
 def nearby_messages():
+    
+    # Get user from token
+    us_id, error = get_current_user()
+    if error:
+        return jsonify({"error": error}), 401
+    
+    # Get query parameters
     lat = request.args.get("lat")
     lon = request.args.get("lon")
     uni_id = request.args.get("uni_id")
