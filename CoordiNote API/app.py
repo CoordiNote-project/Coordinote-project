@@ -735,15 +735,18 @@ def open_message(m_id):
             return jsonify({"error": "Not allowed"}), 403
 
         # Handle view_once: applies to both text and polls
-        if message["view_once"]:
-            cur.execute("""
-                SELECT 1 FROM seen
-                WHERE m_id = %s AND us_id = %s
-            """, (m_id, us_id))
-            if cur.fetchone():
-                return jsonify({"status": "already viewed"}), 403
+        # Check if already seen (only block on second open for view_once)
+        cur.execute("""
+            SELECT 1 FROM seen
+            WHERE m_id = %s AND us_id = %s
+        """, (m_id, us_id))
+        already_seen = cur.fetchone() is not None
 
-            # First open: record in seen
+        if message["view_once"] and already_seen:
+            return jsonify({"status": "already viewed"}), 403
+
+        # Record in seen for all messages (first time only)
+        if not already_seen:
             cur.execute("""
                 INSERT INTO seen (m_id, us_id)
                 VALUES (%s, %s)
