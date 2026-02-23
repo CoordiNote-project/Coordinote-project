@@ -208,7 +208,8 @@ def login_user():
             return jsonify({
                 "message": "Login successful",
                 "token": token,
-                "us_name": user["us_name"]
+                "us_name": user["us_name"],
+                "us_id": user["us_id"]
             }), 200
    
         except Exception as e:

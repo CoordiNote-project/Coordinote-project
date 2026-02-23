@@ -214,7 +214,6 @@ if (app) app.classList.remove('hidden');
 console.log('✓ User logged in:', username);
 initMap();
 loadUniverses();
-loadMessages();
 loadPOIs();
 }
 // 
