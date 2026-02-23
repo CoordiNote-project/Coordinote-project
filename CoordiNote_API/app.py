@@ -318,7 +318,7 @@ def universes():
     finally:
         release_db_connection(conn)
 
-# JOIN an existing UNIVERSE by name (uni_name)
+# JOIN an existing UNIVERSE
 @app.route("/universes/join", methods=["POST"])
 def join_universe():
     us_id, error = get_current_user()
@@ -364,7 +364,7 @@ def join_universe():
     finally:
         release_db_connection(conn)
 
-# Leave universe by uni_name
+# Leave universe
 @app.route("/universes/leave", methods=["POST"])
 def leave_universe():
     us_id, error = get_current_user()
@@ -385,7 +385,7 @@ def leave_universe():
     try:
         cur.execute("""
             SELECT uni_id FROM universes
-            WHERE uni_name = %s;
+            WHERE uni_id = %s;
         """, (uni_id,))
         universe = cur.fetchone()
 
@@ -735,15 +735,18 @@ def open_message(m_id):
             return jsonify({"error": "Not allowed"}), 403
 
         # Handle view_once: applies to both text and polls
-        if message["view_once"]:
-            cur.execute("""
-                SELECT 1 FROM seen
-                WHERE m_id = %s AND us_id = %s
-            """, (m_id, us_id))
-            if cur.fetchone():
-                return jsonify({"status": "already viewed"}), 403
+        # Check if already seen (only block on second open for view_once)
+        cur.execute("""
+            SELECT 1 FROM seen
+            WHERE m_id = %s AND us_id = %s
+        """, (m_id, us_id))
+        already_seen = cur.fetchone() is not None
 
-            # First open: record in seen
+        if message["view_once"] and already_seen:
+            return jsonify({"status": "already viewed"}), 403
+
+        # Record in seen for all messages (first time only)
+        if not already_seen:
             cur.execute("""
                 INSERT INTO seen (m_id, us_id)
                 VALUES (%s, %s)
