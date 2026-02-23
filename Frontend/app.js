@@ -372,10 +372,10 @@ async function loadMessages() {
   if (USE_API && currentUser.token) {
     try {
       const bounds = map.getBounds();
-      const res = await fetch(
-        `${API}/messages/nearby?min_lat=${bounds.getSouth()}&max_lat=${bounds.getNorth()}&min_lon=${bounds.getWest()}&max_lon=${bounds.getEast()}`,
-        { headers: { 'Authorization': currentUser.token } }
-      );
+       const res = await fetch(
+  `${API}/messages/nearby?min_lat=${bounds.getSouth()}&max_lat=${bounds.getNorth()}&min_lon=${bounds.getWest()}&max_lon=${bounds.getEast()}&user_lat=${currentUser.location?.lat ?? LISBON[0]}&user_lon=${currentUser.location?.lng ?? LISBON[1]}`,
+  { headers: { 'Authorization': currentUser.token } }
+);
       const data = await res.json();
       allMessages = data || [];
       renderMessageMarkers(allMessages);
@@ -608,9 +608,7 @@ function fillUniverseDropdowns() {
 
 async function loadPOIs() {
   try {
-    const res = await fetch(
-      `${API}/locations?latitude=${LISBON[0]}&longitude=${LISBON[1]}&radius=10000`
-    );
+        const res = await fetch(`${API}/locations`);
     const data = await res.json();
     allPOIs = data.pois || [];
     
