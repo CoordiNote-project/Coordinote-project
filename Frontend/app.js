@@ -1333,7 +1333,7 @@ function renderUniverseListInReceiver() {
       <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
       <div class="uni-item-text">
         <div class="uni-item-name">${u.uni_name}</div>
-        <div class="uni-item-count">${u.message_count || 0} messages</div>
+        <div class="uni-item-count">${u.descri || ''}</div>
       </div>
       <div class="uni-item-delete" onclick="leaveUniverse(${u.uni_id}, event)" title="Delete">
         🚪
