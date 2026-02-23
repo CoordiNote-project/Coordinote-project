@@ -597,6 +597,8 @@ def nearby_messages():
     max_lat  = request.args.get("max_lat")
     min_lon  = request.args.get("min_lon")
     max_lon  = request.args.get("max_lon")
+    user_lat = request.args.get("user_lat")
+    user_lon = request.args.get("user_lon")
 
     if not all([min_lat, max_lat, min_lon, max_lon]):
         return jsonify({"error": "min_lat, max_lat, min_lon, max_lon are required"}), 400
@@ -611,7 +613,11 @@ def nearby_messages():
                 u.us_name    AS creator_name,
                 un.uni_name,
                 ST_Y(l.geom) AS latitude,
-                ST_X(l.geom) AS longitude
+                ST_X(l.geom) AS longitude,
+                ROUND(ST_Distance(
+                    l.geom::geography,
+                    ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
+                )) AS distance
             FROM messages m
             JOIN locations l  ON m.location_id = l.location_id
             JOIN users u      ON m.creator = u.us_id
@@ -621,7 +627,7 @@ def nearby_messages():
                 l.geom,
                 ST_MakeEnvelope(%s, %s, %s, %s, 4326)
             );
-        """, (us_id, min_lon, min_lat, max_lon, max_lat))
+        """, (user_lon, user_lat, us_id, min_lon, min_lat, max_lon, max_lat))
 
         return jsonify(list(cur.fetchall()))
 
