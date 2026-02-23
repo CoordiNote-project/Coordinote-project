@@ -14,7 +14,7 @@ import json # for working with JSON data, we will use it to parse and generate J
 
 # Database configuration
 DB_CONFIG = {
-    "database": "coordinote_share", # The name of the database we will connect to (specific for me, Marie - we need to update this)
+    "database": "coordinote_db",
     "user": "postgres",
     "password": "postgres",
     "host": "localhost",
@@ -281,9 +281,9 @@ def universes():
                 "message": "Universe created"
             }), 201
 
-        # GET only universes the user belongs to -> universe name, access type, description
+        # GET only universes the user belongs to
         cur.execute("""
-            SELECT u.uni_name, u.access, u.descri
+            SELECT u.uni_id, u.uni_name, u.access, u.descri
             FROM universes u
             JOIN user_univ uu ON u.uni_id = uu.uni_id
             WHERE uu.us_id = %s;
@@ -396,8 +396,8 @@ def leave_universe():
 
 
 # LOCATIONS route
-# Returns POIs from the locations table as GeoJSON FeatureCollection for frontend map display.
-# Optional filter: ?category=metro --> ???
+# Returns POI data from the locations table for frontend map display.
+# Optional filter: ?category=metro
 @app.route("/locations", methods=["GET"])
 def get_locations():
     conn = get_db_connection()
@@ -408,34 +408,32 @@ def get_locations():
 
         if category_filter:
             cur.execute("""
-                SELECT location_id, l_name, category, ST_AsGeoJSON(geom) as geometry
+                SELECT location_id, l_name, category,
+                       ST_Y(geom) AS latitude,
+                       ST_X(geom) AS longitude
                 FROM locations
                 WHERE category = %s;
             """, (category_filter,))
         else:
             cur.execute("""
-                SELECT location_id, l_name, category, ST_AsGeoJSON(geom) as geometry
+                SELECT location_id, l_name, category,
+                       ST_Y(geom) AS latitude,
+                       ST_X(geom) AS longitude
                 FROM locations;
             """)
 
         locations = cur.fetchall()
 
-        features = []
-        for loc in locations:
-            feature = {
-                "type": "Feature",
-                "geometry": json.loads(loc["geometry"]),
-                "properties": {
-                    "location_id": loc["location_id"],
-                    "name": loc["l_name"],
-                    "category": loc["category"]
-                }
-            }
-            features.append(feature)
-
         return jsonify({
-            "type": "FeatureCollection",
-            "features": features
+            "pois": [
+                {
+                    "poi_name": loc["l_name"],
+                    "poi_category": loc["category"],
+                    "latitude": loc["latitude"],
+                    "longitude": loc["longitude"]
+                }
+                for loc in locations
+            ]
         }), 200
 
     except Exception as e:
@@ -443,7 +441,6 @@ def get_locations():
 
     finally:
         release_db_connection(conn)
-
 
 # MESSAGES: POST + GET rout
 # POST /messages
