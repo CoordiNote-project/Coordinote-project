@@ -429,42 +429,12 @@ const marker = L.marker([msg.latitude, msg.longitude], {
 }
 
 async function showMessageDetail(msg) {
-  // Fetch full content from API
-  try {
-    const res = await fetch(`${API}/messages/${msg.m_id}/open`, {
-      method: 'POST',
-      headers: { 'Authorization': currentUser.token }
-    });
-    const data = await res.json();
-    if (data.poll_options) msg.poll_options = data.poll_options;
-    if (data.m_txt) msg.m_txt = data.m_txt;
-  } catch (err) {
-    console.warn('Could not open message via API');
-  }
-
-  seenMessages.add(msg.m_id);
-  if (msg.view_once) {
-    const idx = allMessages.findIndex(m => m.m_id === msg.m_id);
-    if (idx !== -1 && messageMarkers[idx]) {
-      map.removeLayer(messageMarkers[idx]);
-      messageMarkers.splice(idx, 1);
-      allMessages.splice(idx, 1);
-    }
-    if (messageCircles[msg.m_id]) {
-      map.removeLayer(messageCircles[msg.m_id]);
-      delete messageCircles[msg.m_id];
-    }
-  }
-
   const panel = document.getElementById('sidePanel');
   const panelBadge = document.getElementById('panelBadge');
   const panelBody = document.getElementById('panelBody');
-
   if (!panel || !panelBody) return;
 
-  if (panelBadge) {
-    panelBadge.textContent = msg.m_type.toUpperCase();
-  }
+  if (panelBadge) panelBadge.textContent = msg.m_type.toUpperCase();
 
   let body = `
     <div style="margin-bottom:16px">
@@ -485,76 +455,128 @@ async function showMessageDetail(msg) {
     `;
   }
 
-  if (msg.distance !== undefined) {
-    const isCreator = msg.creator_name === currentUser?.username;
-    const locked = !isCreator && msg.distance > (msg.unl_rad || 50);
+  const isCreator = msg.creator_name === currentUser?.username;
+  const locked = !isCreator && msg.distance > (msg.unl_rad || 50);
 
-   if (!locked) {
-  if (msg.m_type === 'text' && msg.m_txt) {
-    body += `
-      <div style="background:#13151e;border-radius:10px;padding:14px;margin-bottom:14px;
-                  font-size:0.9rem;line-height:1.6">
-        ${msg.m_txt}
-      </div>
-    `;
-  }
+  if (!locked) {
+    try {
+      const res = await fetch(`${API}/messages/${msg.m_id}/open`, {
+        method: 'POST',
+        headers: { 'Authorization': currentUser.token }
+      });
+      const data = await res.json();
 
-  if (msg.m_type === 'poll' && msg.poll_options) {
-    body += `<div style="font-weight:600;margin-bottom:10px">${msg.m_txt}</div>`;
-    body += `<div style="display:flex;flex-direction:column;gap:8px">`;
-    msg.poll_options.forEach(opt => {
-      body += `
-        <button onclick="votePoll(${opt.option_id})"
-                style="background:#1e2030;border:1px solid #2d3048;
-                       border-radius:8px;padding:10px;color:white;cursor:pointer">
-          ${opt.option_text}
-        </button>`;
-    });
-    body += `</div>`;
-  }
-}
+      if (data.status === 'already viewed') {
+        body += `<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);
+                             border-radius:10px;padding:12px;font-size:0.85rem;color:#ff4d6d">
+                   🫣 Already seen!
+                 </div>`;
+        panelBody.innerHTML = body;
+        panel.classList.add('active');
+        return;
+      }
 
-    body += `
-      <div style="background:${locked ? 'rgba(255,77,109,0.1)' : 'rgba(45,228,200,0.1)'};
-                  border:1px solid ${locked ? 'rgba(255,77,109,0.3)' : 'rgba(45,228,200,0.3)'};
-                  border-radius:10px;padding:12px;margin-top:12px;font-size:0.85rem;
-                  color:${locked ? '#ff4d6d' : '#2de4c8'}">
-        ${locked
-          ? `🔒 Locked — ${formatDist(msg.distance)} away (need ${msg.unl_rad}m)`
-          : `🔓 Unlocked!`
+      seenMessages.add(msg.m_id);
+      updateMarkerAppearance(msg.m_id);
+
+      if (messageCircles[msg.m_id]) {
+        map.removeLayer(messageCircles[msg.m_id]);
+        delete messageCircles[msg.m_id];
+      }
+
+      if (msg.view_once) {
+        const idx = allMessages.findIndex(m => m.m_id === msg.m_id);
+        if (idx !== -1 && messageMarkers[idx]) {
+          map.removeLayer(messageMarkers[idx]);
+          messageMarkers.splice(idx, 1);
+          allMessages.splice(idx, 1);
         }
-      </div>
-    `;
+      }
+
+      // Text showing
+      if (data.m_type === 'text' && data.m_txt) {
+        body += `
+          <div style="background:#13151e;border-radius:10px;padding:14px;margin-bottom:14px;
+                      font-size:0.9rem;line-height:1.6">
+            ${data.m_txt}
+          </div>
+        `;
+      }
+
+      // Poll options if not yet voted 
+      if (data.m_type === 'poll' && !data.already_voted && data.poll_options) {
+        body += `<div style="font-weight:600;margin-bottom:10px">${data.p_txt}</div>`;
+        body += `<div style="display:flex;flex-direction:column;gap:8px">`;
+        data.poll_options.forEach(opt => {
+          body += `
+            <button onclick="votePoll(${opt.option_id}, ${msg.m_id})"
+                    style="background:#1e2030;border:1px solid #2d3048;
+                           border-radius:8px;padding:10px;color:white;cursor:pointer">
+              ${opt.option_text}
+            </button>`;
+        });
+        body += `</div>`;
+      }
+
+      // showing results of poll if already voted
+      if (data.m_type === 'poll' && data.already_voted && data.results) {
+        body += `<div style="font-weight:600;margin-bottom:10px">${data.p_txt}</div>`;
+        body += `<div style="display:flex;flex-direction:column;gap:8px">`;
+        data.results.forEach(opt => {
+          const pct = data.total_votes > 0 ? Math.round((opt.vote_count / data.total_votes) * 100) : 0;
+          body += `
+            <div style="background:#1e2030;border:1px solid #2d3048;
+                        border-radius:8px;padding:10px;color:white">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <span>${opt.option_text}</span>
+                <span style="color:#2de4c8">${pct}%</span>
+              </div>
+              <div style="background:#2d3048;border-radius:4px;height:4px">
+                <div style="background:#2de4c8;height:4px;border-radius:4px;width:${pct}%"></div>
+              </div>
+            </div>`;
+        });
+        body += `</div>`;
+        body += `<div style="font-size:0.75rem;color:#6b7280;margin-top:8px">${data.total_votes} votes total</div>`;
+      }
+
+    } catch (err) {
+      console.warn('Could not open message via API');
+    }
+
+    body += `
+      <div style="background:rgba(45,228,200,0.1);border:1px solid rgba(45,228,200,0.3);
+                  border-radius:10px;padding:12px;margin-top:12px;font-size:0.85rem;color:#2de4c8">
+        🔓 Unlocked!
+      </div>`;
+
+  } else {
+    body += `
+      <div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);
+                  border-radius:10px;padding:12px;margin-top:12px;font-size:0.85rem;color:#ff4d6d">
+        🔒 Locked — ${formatDist(msg.distance)} away (need ${msg.unl_rad}m)
+      </div>`;
   }
 
   panelBody.innerHTML = body;
   panel.classList.add('active');
 }
 
-async function votePoll(optionId) {
+async function votePoll(optionId, msgId) {
   try {
     const res = await fetch(`${API}/poll/vote`, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': currentUser.token 
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': currentUser.token },
       body: JSON.stringify({ option_id: optionId })
     });
-
     const data = await res.json();
-
     if (!res.ok) {
       showToast(data.error || 'Could not vote', 'error');
       return;
     }
-
     showToast('Vote recorded! 🗳️', 'success');
-
-    // Reload the side panel to show results
-    const msg = allMessages.find(m => m.poll_options?.some(o => o.option_id == optionId));
+    const msg = allMessages.find(m => m.m_id === msgId);
     if (msg) showMessageDetail(msg);
-
   } catch (err) {
     showToast('Server not reachable', 'error');
   }
