@@ -625,22 +625,25 @@ def nearby_messages():
                 m.m_id, m.m_type, m.unl_rad, m.crt_time, m.view_once, m.m_txt,
                 u.us_name    AS creator_name,
                 un.uni_name,
+                un.uni_id,
                 ST_Y(l.geom) AS latitude,
                 ST_X(l.geom) AS longitude,
                 ROUND(ST_Distance(
                     l.geom::geography,
                     ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
-                )) AS distance
+                )) AS distance,
+                CASE WHEN s.us_id IS NOT NULL THEN true ELSE false END AS is_seen
             FROM messages m
             JOIN locations l  ON m.location_id = l.location_id
             JOIN users u      ON m.creator = u.us_id
             JOIN universes un ON m.uni_id = un.uni_id
             JOIN user_univ uu ON m.uni_id = uu.uni_id AND uu.us_id = %s
+            LEFT JOIN seen s  ON m.m_id = s.m_id AND s.us_id = %s
             WHERE ST_Within(
                 l.geom,
                 ST_MakeEnvelope(%s, %s, %s, %s, 4326)
             );
-        """, (user_lon, user_lat, us_id, min_lon, min_lat, max_lon, max_lat))
+        """, (user_lon, user_lat, us_id, us_id, min_lon, min_lat, max_lon, max_lat))
 
         return jsonify(list(cur.fetchall()))
 
