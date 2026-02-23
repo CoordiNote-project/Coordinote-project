@@ -609,7 +609,7 @@ function fillUniverseDropdowns() {
 async function loadPOIs() {
   try {
     const res = await fetch(
-      `${API}/poi?latitude=${LISBON[0]}&longitude=${LISBON[1]}&radius=10000`
+      `${API}/locations?latitude=${LISBON[0]}&longitude=${LISBON[1]}&radius=10000`
     );
     const data = await res.json();
     allPOIs = data.pois || [];
