@@ -1307,7 +1307,7 @@ async function openDiscoverModal() {
   document.getElementById('discoverModal').classList.remove('hidden');
 
   try {
-    const res = await fetch(`${API}/universes/public`);
+    const res = await fetch(`${API}/universes/search`);
     const data = await res.json();
 
     if (!data.length) {
