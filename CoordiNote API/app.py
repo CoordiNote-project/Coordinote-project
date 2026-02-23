@@ -17,7 +17,7 @@ from flask_cors import CORS # CORS is needed for connection with frontend
 DB_CONFIG = {
     "database": "coordinote_db",
     "user": "postgres",
-    "password": "almakohl1007",
+    "password": "postgres",
     "host": "localhost",
     "port": "5432"
 }
@@ -317,9 +317,9 @@ def join_universe():
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
 
-    uni_name = data.get("uni_name", "").strip()
-    if not uni_name:
-        return jsonify({"error": "uni_name required"}), 400
+    uni_id = data.get("uni_id")
+    if not uni_id:
+        return jsonify({"error": "uni_id required"}), 400
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -328,8 +328,8 @@ def join_universe():
         # does the universe exist? resolve uni_name to uni_id
         cur.execute("""
             SELECT uni_id FROM universes
-            WHERE LOWER(uni_name) = LOWER(%s);
-        """, (uni_name,))
+            WHERE uni_id = %s;
+        """, (uni_id,))
         universe = cur.fetchone()
 
         if not universe:
@@ -341,10 +341,10 @@ def join_universe():
             VALUES (%s, %s)
             ON CONFLICT DO NOTHING;
         """, (us_id, universe["uni_id"]))
-       
-        conn.commit()
-        return jsonify({"message": f"Joined {uni_name}"}), 200
 
+        conn.commit()
+        return jsonify({"message": f"Joined universe {uni_id}"}), 200
+    
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
@@ -750,7 +750,7 @@ def open_message(m_id):
                 # RETURN RESULTS with vote counts
                 cur.execute("""
                     SELECT po.option_id, po.option_text,
-                           COUNT(pv.vote_id) AS vote_count
+                           COUNT(*) AS vote_count
                     FROM poll_options po
                     LEFT JOIN poll_votes pv ON po.option_id = pv.option_id
                     WHERE po.m_id = %s
@@ -981,7 +981,7 @@ def poll_results(m_id):
             SELECT
                 po.option_id,
                 po.option_text,
-                COUNT(pv.vote_id) AS vote_count
+                COUNT(*) AS vote_count
             FROM poll_options po
             LEFT JOIN poll_votes pv ON po.option_id = pv.option_id
             WHERE po.m_id = %s
