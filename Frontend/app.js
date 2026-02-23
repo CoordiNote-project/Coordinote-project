@@ -803,42 +803,48 @@ function switchView(view) {
 }
 
 // Search universes
-function searchUniverses(query) {
+async function searchUniverses(query) {
+  const list = document.getElementById('universeListReceiver');
+  if (!list) return;
+
   if (!query.trim()) {
-    // empty query - show all
     renderUniverseListInReceiver();
     return;
   }
 
-  //search for all universes that include the query (case-insensitive)
-  const results = allUniverses.filter(u => 
-    u.uni_name.toLowerCase().includes(query.toLowerCase())
-  );
+  try {
+    const res = await fetch(`${API}/universes/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
 
-  const list = document.getElementById('universeListReceiver');
-  if (!list) return;
+    const results = data.filter(u =>
+      u.uni_name.toLowerCase().includes(query.toLowerCase())
+    );
 
-  if (!results.length) {
-    list.innerHTML = '<div class="list-empty">No universes found</div>';
-    return;
-  }
+    if (!results.length) {
+      list.innerHTML = '<div class="list-empty">No universes found</div>';
+      return;
+    }
 
-  list.innerHTML = results.map(u => {
-    const isHidden = hiddenUniverses.includes(u.uni_id);
-    return `
-      <div class="uni-item-new" onclick="filterMessagesByUniverse(${u.uni_id})">
-        <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
-        <div class="uni-item-text">
-          <div class="uni-item-name">${u.uni_name}</div>
-          <div class="uni-item-count">${isHidden ? '👋 Left' : u.message_count + ' messages'}</div>
+    list.innerHTML = results.map(u => {
+      const isMember = allUniverses.some(my => my.uni_id == u.uni_id);
+      return `
+        <div class="uni-item-new">
+          <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
+          <div class="uni-item-text">
+            <div class="uni-item-name">${u.uni_name}</div>
+            <div class="uni-item-count">${u.descri || ''}</div>
+          </div>
+          ${isMember
+            ? `<div style="color:#2de4c8;font-size:0.75rem">✓ Joined</div>`
+            : `<div class="uni-item-delete" onclick="joinUniverse('${u.uni_id}', '${u.uni_name}')" title="Join" style="color:#2de4c8">➕</div>`
+          }
         </div>
-        ${isHidden
-          ? `<div class="uni-item-delete" onclick="rejoinUniverse(${u.uni_id}, event)" title="Rejoin">➕</div>`
-          : `<div class="uni-item-delete" onclick="deleteUniverse(${u.uni_id}, event)" title="Leave">🚪</div>`
-        }
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+
+  } catch (err) {
+    list.innerHTML = '<div class="list-empty">Could not search universes</div>';
+  }
 }
 // Delete universe
 function deleteUniverse(uniId, event) {
@@ -1337,7 +1343,7 @@ async function joinUniverse(uniId, uniName) {
       const res = await fetch(`${API}/universes/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': currentUser.token },
-        body: JSON.stringify({ uni_name: uniName })
+        body: JSON.stringify({ uni_id: uniId })
       });
       if (!res.ok) {
         showToast('Could not join universe', 'error');
