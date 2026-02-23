@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public."possAnsw"
 (
     q_id integer NOT NULL,
     aswr_id integer NOT NULL,
-    aswr_txt text COLLATE pg_catalog."default" NOT NULL,
+    aswr_txt text COLLATE pg_catalog."default" NOT NULL,2
     tf boolean NOT NULL,
     CONSTRAINT "possAnsw_pkey" PRIMARY KEY (q_id, aswr_id)
 );
