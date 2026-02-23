@@ -220,23 +220,35 @@ def login_user():
     else:
         return jsonify({"error": "Username and password do not match. Try again."}), 401
 
-# SHOW ALL PUBLIC UNIVERSES route
-@app.route("/universes/public", methods=["GET"])
-def public_universes():
+# SEARCH ALL UNIVERSES route (public and private)
+# Optional: ?q=searchterm to filter by name
+@app.route("/universes/search", methods=["GET"])
+def search_universes():
+    query = request.args.get("q", "").strip()
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        cur.execute("""
-            SELECT uni_name, descri
-            FROM universes
-            WHERE access = false;
-        """)
-        universes = cur.fetchall() # fetchall() retrieves all rows of a query result, returning them as a list of dictionaries (because we set cursor_factory=RealDictCursor when creating the connection pool). Each dictionary represents a row from the result set, with column names as keys and corresponding values as values. In this case, each dictionary will have keys "uni_name" and "descri" corresponding to the columns selected in the SQL query.
-        return jsonify(universes) # jsonify() converts the list of dictionaries into a JSON response that can be sent back to the client. The resulting JSON will be an array of objects, where each object represents a public universe with its name and description.
+        if query:
+            cur.execute("""
+                SELECT uni_id, uni_name, access, descri
+                FROM universes
+                WHERE LOWER(uni_name) LIKE LOWER(%s);
+            """, (f"%{query}%",))
+        else:
+            cur.execute("""
+                SELECT uni_id, uni_name, access, descri
+                FROM universes;
+            """)
+
+        return jsonify(list(cur.fetchall())), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
     finally:
         release_db_connection(conn)
+
 
 # GET: LIST universes the logged-in user belongs to
 # POST: CREATE a new universe (creator is auto-joined)
