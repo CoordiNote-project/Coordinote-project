@@ -523,7 +523,7 @@ function showMessageDetail(msg) {
 
   panelBody.innerHTML = body;
   panel.classList.add('active');
-}
+
 function updateMarkerAppearance(msgId) {
   const idx = allMessages.findIndex(m => m.m_id === msgId);
   if (idx === -1) return;
