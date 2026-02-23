@@ -1380,7 +1380,9 @@ async function openDiscoverModal() {
     const res = await fetch(`${API}/universes/search`);
     const data = await res.json();
 
-    if (!data.length) {
+     const publicOnly = data.filter(u => u.access === false);
+
+    if (!publicOnly.length) {
       list.innerHTML = '<div class="list-empty">No public universes found</div>';
       return;
     }
