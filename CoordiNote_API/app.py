@@ -318,7 +318,7 @@ def universes():
     finally:
         release_db_connection(conn)
 
-# JOIN an existing UNIVERSE by name (uni_name)
+# JOIN an existing UNIVERSE
 @app.route("/universes/join", methods=["POST"])
 def join_universe():
     us_id, error = get_current_user()
@@ -364,7 +364,7 @@ def join_universe():
     finally:
         release_db_connection(conn)
 
-# Leave universe by uni_name
+# Leave universe
 @app.route("/universes/leave", methods=["POST"])
 def leave_universe():
     us_id, error = get_current_user()
@@ -385,7 +385,7 @@ def leave_universe():
     try:
         cur.execute("""
             SELECT uni_id FROM universes
-            WHERE uni_name = %s;
+            WHERE uni_id = %s;
         """, (uni_id,))
         universe = cur.fetchone()
 
