@@ -1,7 +1,6 @@
 --
 -- PostgreSQL database dump
 --
-\restrict EQgHwqImbPcKXR5L5dOgOqY6vVj4DZE3lHzJI4dv5LLPySuZsd0nOjcrKLgpMR5
 
 
 SET statement_timeout = 0;
@@ -486,6 +485,4 @@ ALTER TABLE ONLY public.user_univ
     ADD CONSTRAINT user_uni_us_id_fkey FOREIGN KEY (us_id) REFERENCES public.users(us_id);
 
 --
-
-\unrestrict EQgHwqImbPcKXR5L5dOgOqY6vVj4DZE3lHzJI4dv5LLPySuZsd0nOjcrKLgpMR5
 
