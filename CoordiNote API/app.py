@@ -343,7 +343,7 @@ def join_universe():
         """, (us_id, universe["uni_id"]))
        
         conn.commit()
-        return jsonify({"message": f"Joined {uni_name}"}), 200
+        return jsonify({"message": f"Joined {uni_id}"}), 200
 
     except Exception as e:
         conn.rollback()
