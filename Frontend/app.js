@@ -504,58 +504,30 @@ async function showMessageDetail(msg) {
     const isCreator = msg.creator_name === currentUser?.username;
     const locked = !isCreator && msg.distance > (msg.unl_rad || 50);
 
-    if (!locked) {
-      const res = await fetch(`${API}/messages/${msg.m_id}/open`, {
-        method: 'POST',
-        headers: { 'Authorization': currentUser.token }
-      });
-      const data = await res.json();
+   if (!locked) {
+  if (msg.m_type === 'text' && msg.m_txt) {
+    body += `
+      <div style="background:#13151e;border-radius:10px;padding:14px;margin-bottom:14px;
+                  font-size:0.9rem;line-height:1.6">
+        ${msg.m_txt}
+      </div>
+    `;
+  }
 
-      if (data.status === 'already viewed') {
-        showToast('Already seen! 🫣', 'error');
-        return;
-      }
-
-      seenMessages.add(msg.m_id);
-      updateMarkerAppearance(msg.m_id);
-
-      if (messageCircles[msg.m_id]) {
-        map.removeLayer(messageCircles[msg.m_id]);
-        delete messageCircles[msg.m_id];
-      }
-
-      if (msg.view_once) {
-        const idx = allMessages.findIndex(m => m.m_id === msg.m_id);
-        if (idx !== -1 && messageMarkers[idx]) {
-          map.removeLayer(messageMarkers[idx]);
-          messageMarkers.splice(idx, 1);
-          allMessages.splice(idx, 1);
-        }
-      }
-
-      if (msg.m_txt) {
-        body += `
-          <div style="background:#13151e;border-radius:10px;padding:14px;margin-bottom:14px;
-                      font-size:0.9rem;line-height:1.6">
-            ${msg.m_txt}
-          </div>
-        `;
-      }
-
-      if (msg.m_type === 'poll' && msg.poll_options) {
-        body += `<div style="font-weight:600;margin-bottom:10px">${msg.m_txt}</div>`;
-        body += `<div style="display:flex;flex-direction:column;gap:8px">`;
-        msg.poll_options.forEach(opt => {
-          body += `
-            <button onclick="votePoll(${opt.option_id})"
-                    style="background:#1e2030;border:1px solid #2d3048;
-                           border-radius:8px;padding:10px;color:white;cursor:pointer">
-              ${opt.option_text}
-            </button>`;
-        });
-        body += `</div>`;
-      }
-    }
+  if (msg.m_type === 'poll' && msg.poll_options) {
+    body += `<div style="font-weight:600;margin-bottom:10px">${msg.m_txt}</div>`;
+    body += `<div style="display:flex;flex-direction:column;gap:8px">`;
+    msg.poll_options.forEach(opt => {
+      body += `
+        <button onclick="votePoll(${opt.option_id})"
+                style="background:#1e2030;border:1px solid #2d3048;
+                       border-radius:8px;padding:10px;color:white;cursor:pointer">
+          ${opt.option_text}
+        </button>`;
+    });
+    body += `</div>`;
+  }
+}
 
     body += `
       <div style="background:${locked ? 'rgba(255,77,109,0.1)' : 'rgba(45,228,200,0.1)'};
@@ -927,7 +899,7 @@ async function searchUniverses(query) {
 // Delete universe
 async function leaveUniverse(uniId, event) {
   event.stopPropagation();
-
+  const uniName = allUniverses.find(u => u.uni_id == uniId)?.uni_name; 
   if (USE_API) {
     try {
       const res = await fetch(`${API}/universes/leave`, {
@@ -947,6 +919,9 @@ async function leaveUniverse(uniId, event) {
       return;
     }
   }
+    allUniverses = allUniverses.filter(u => u.uni_id != uniId);
+      allMessages = allMessages.filter(m => m.uni_id != uniId);
+  renderMessageMarkers(allMessages);
 
   hiddenUniverses.push(uniId);
   renderUniverseListInReceiver();
@@ -1324,7 +1299,7 @@ function renderUniverseListInReceiver() {
         <div class="uni-item-name">${u.uni_name}</div>
         <div class="uni-item-count">${u.message_count || 0} messages</div>
       </div>
-      <div class="uni-item-delete" onclick="deleteUniverse(${u.uni_id}, event)" title="Delete">
+      <div class="uni-item-delete" onclick="leaveUniverse(${u.uni_id}, event)" title="Delete">
         🚪
       </div>
     </div>
