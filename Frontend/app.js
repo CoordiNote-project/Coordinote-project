@@ -420,21 +420,6 @@ const marker = L.marker([msg.latitude, msg.longitude], {
   })
 }).addTo(map);
 
-    // Popup
-    marker.bindPopup(`
-      <div style="font-family:'DM Sans',sans-serif;min-width:180px">
-        <div style="font-size:0.7rem;color:#6b7280;margin-bottom:4px">
-          ${typeIcon(msg.m_type)} ${msg.m_type?.toUpperCase()}
-        </div>
-        <div style="font-size:0.72rem;color:#6b7280">
-          by ${msg.creator_name || 'unknown'}
-           </div>
-    <div style="font-size:0.75rem;color:#6b7280;margin-top:4px">
-      🔍 Click for details
-        </div>
-      </div>
-    `);
-
     marker.on('click', () => {
       showMessageDetail(msg);
     });
