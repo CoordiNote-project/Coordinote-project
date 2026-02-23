@@ -398,9 +398,16 @@ async function loadMessages() {
 function renderMessageMarkers(messages) {
   messageMarkers.forEach(m => map.removeLayer(m));
   messageMarkers = [];
-
+  Object.values(messageCircles).forEach(c => map.removeLayer(c));
+  messageCircles = {};
   messages.forEach(msg => {
     if (!msg.latitude || !msg.longitude) return;
+        const circle = L.circle([msg.latitude, msg.longitude], {
+      radius: msg.unl_rad || 50,
+      fillColor: '#8f2de4', fillOpacity: 0.1,
+      color: '#8f2de4', weight: 1, dashArray: '5, 5'
+    }).addTo(map);
+    messageCircles[msg.m_id] = circle;
    const isSeen = seenMessages.has(msg.m_id);
 const marker = L.marker([msg.latitude, msg.longitude], {
   icon: L.divIcon({
@@ -1307,7 +1314,7 @@ async function openDiscoverModal() {
   document.getElementById('discoverModal').classList.remove('hidden');
 
   try {
-    const res = await fetch(`${API}/universes/public`);
+    const res = await fetch(`${API}/universes/search`);
     const data = await res.json();
 
     if (!data.length) {
