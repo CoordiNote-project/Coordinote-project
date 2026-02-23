@@ -328,8 +328,8 @@ def join_universe():
         # does the universe exist? resolve uni_name to uni_id
         cur.execute("""
             SELECT uni_id FROM universes
-            WHERE LOWER(uni_name) = LOWER(%s);
-        """, (uni_name,))
+            WHERE uni_id = %s;
+        """, (uni_id,))
         universe = cur.fetchone()
 
         if not universe:
@@ -341,10 +341,10 @@ def join_universe():
             VALUES (%s, %s)
             ON CONFLICT DO NOTHING;
         """, (us_id, universe["uni_id"]))
-       
-        conn.commit()
-        return jsonify({"message": f"Joined {uni_name}"}), 200
 
+        conn.commit()
+        return jsonify({"message": f"Joined universe {uni_id}"}), 200
+    
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
