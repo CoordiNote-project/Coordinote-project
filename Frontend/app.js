@@ -385,6 +385,8 @@ async function loadMessages() {
 );
       const data = await res.json();
       allMessages = data || [];
+      // Merge API seen flags into seenMessages - never wipe what's already there
+      allMessages.filter(m => m.is_seen).forEach(m => seenMessages.add(m.m_id));
       renderMessageMarkers(allMessages);
       return;
     } catch (err) {
@@ -402,13 +404,15 @@ function renderMessageMarkers(messages) {
   messageCircles = {};
   messages.forEach(msg => {
     if (!msg.latitude || !msg.longitude) return;
-        const circle = L.circle([msg.latitude, msg.longitude], {
-      radius: msg.unl_rad || 50,
-      fillColor: '#8f2de4', fillOpacity: 0.1,
-      color: '#8f2de4', weight: 1, dashArray: '5, 5'
-    }).addTo(map);
-    messageCircles[msg.m_id] = circle;
-   const isSeen = seenMessages.has(msg.m_id);
+        const isSeen = msg.is_seen || seenMessages.has(msg.m_id);
+    if (!isSeen) {
+      const circle = L.circle([msg.latitude, msg.longitude], {
+        radius: msg.unl_rad || 50,
+        fillColor: '#8f2de4', fillOpacity: 0.1,
+        color: '#8f2de4', weight: 1, dashArray: '5, 5'
+      }).addTo(map);
+      messageCircles[msg.m_id] = circle;
+    }
 const marker = L.marker([msg.latitude, msg.longitude], {
   icon: L.divIcon({
     html: `<div style="font-size:1.4rem;${isSeen ? 'filter:grayscale(100%);opacity:0.5' : ''}">
@@ -458,6 +462,18 @@ async function showMessageDetail(msg) {
   const isCreator = msg.creator_name === currentUser?.username;
   const locked = !isCreator && msg.distance > (msg.unl_rad || 50);
 
+  // Only mark seen and update symbology if the message is actually reachable
+  if (!locked) {
+    seenMessages.add(msg.m_id);
+    msg.is_seen = true;
+    if (messageCircles[msg.m_id]) {
+      map.removeLayer(messageCircles[msg.m_id]);
+      delete messageCircles[msg.m_id];
+    }
+    updateMarkerAppearance(msg.m_id);
+    window.lastOpenedMsg = msg;
+  }
+
   if (!locked) {
     try {
       const res = await fetch(`${API}/messages/${msg.m_id}/open`, {
@@ -484,14 +500,6 @@ async function showMessageDetail(msg) {
         delete messageCircles[msg.m_id];
       }
 
-      if (msg.view_once) {
-        const idx = allMessages.findIndex(m => m.m_id === msg.m_id);
-        if (idx !== -1 && messageMarkers[idx]) {
-          map.removeLayer(messageMarkers[idx]);
-          messageMarkers.splice(idx, 1);
-          allMessages.splice(idx, 1);
-        }
-      }
 
       // Text showing
       if (data.m_type === 'text' && data.m_txt) {
@@ -589,9 +597,9 @@ function updateMarkerAppearance(msgId) {
   const marker = messageMarkers[idx];
   if (!marker) return;
   
-  // Grauer Icon
+  // Grey Icon
   marker.setIcon(L.divIcon({
-    html: `<div style="font-size:1.4rem;filter:grayscale(100%);opacity:0.5">🎁</div>`,
+    html: `<div style="font-size:1.4rem;filter:grayscale(100%);opacity:0.5">${typeIcon(allMessages[idx].m_type)}</div>`,
     className: '',
     iconSize: [30, 30],
     iconAnchor: [15, 15]
@@ -600,6 +608,22 @@ function updateMarkerAppearance(msgId) {
 function closeSidePanel() {
   const panel = document.getElementById('sidePanel');
   if (panel) panel.classList.remove('active');
+
+  // view_once: remove from map and data when panel closes
+  if (window.lastOpenedMsg?.view_once) {
+    const msg = window.lastOpenedMsg;
+    const idx = allMessages.findIndex(m => m.m_id === msg.m_id);
+    if (idx !== -1) {
+      if (messageMarkers[idx]) map.removeLayer(messageMarkers[idx]);
+      messageMarkers.splice(idx, 1);
+      allMessages.splice(idx, 1);
+    }
+    if (messageCircles[msg.m_id]) {
+      map.removeLayer(messageCircles[msg.m_id]);
+      delete messageCircles[msg.m_id];
+    }
+    window.lastOpenedMsg = null;
+  }
 }
 
 async function deleteMessage(msgId) {
