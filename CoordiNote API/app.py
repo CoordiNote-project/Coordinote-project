@@ -11,6 +11,7 @@ from passlib.hash import bcrypt # This is a library for hashing passwords secure
 import uuid # for generating unique identifiers, we will use it to generate unique IDs for users and notes
 from datetime import datetime, timedelta # for working with dates and times, we will use it to set expiration times for authentication tokens
 import json # for working with JSON data, we will use it to parse and generate JSON for API requests and responses
+from flask_cors import CORS # CORS is needed for connection with frontend
 
 # Database configuration
 DB_CONFIG = {
@@ -36,7 +37,7 @@ db_pool = SimpleConnectionPool(
 
 # Create Flask app
 app = Flask(__name__)
-
+CORS(app)
 
 # Helper functions
 def get_db_connection():
