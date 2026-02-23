@@ -17,7 +17,7 @@ from flask_cors import CORS # CORS is needed for connection with frontend
 DB_CONFIG = {
     "database": "coordinote_db",
     "user": "postgres",
-    "password": "postgres",
+    "password": "almakohl1007",
     "host": "localhost",
     "port": "5432"
 }
