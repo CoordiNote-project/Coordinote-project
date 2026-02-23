@@ -1379,25 +1379,29 @@ async function openDiscoverModal() {
   try {
     const res = await fetch(`${API}/universes/search`);
     const data = await res.json();
-
-     const publicOnly = data.filter(u => u.access === false);
+     const publicOnly = data.filter(u => !u.access);
 
     if (!publicOnly.length) {
       list.innerHTML = '<div class="list-empty">No public universes found</div>';
       return;
     }
 
-    list.innerHTML = data.map(u => `
-      <div class="uni-item-new">
-        <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
-        <div class="uni-item-text">
-          <div class="uni-item-name">${u.uni_name}</div>
-          <div class="uni-item-count">${u.descri || ''}</div>
-        </div>
-        <div class="uni-item-delete" onclick="joinUniverse('${u.uni_id}', '${u.uni_name}')" 
-             title="Join" style="color:#2de4c8">➕</div>
+     list.innerHTML = publicOnly.map(u => {
+     const isMember = allUniverses.some(my => my.uni_id == u.uni_id);
+     return `
+    <div class="uni-item-new">
+      <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
+      <div class="uni-item-text">
+        <div class="uni-item-name">${u.uni_name}</div>
+        <div class="uni-item-count">${u.descri || ''}</div>
       </div>
-    `).join('');
+      ${isMember
+        ? `<div style="color:#2de4c8;font-size:0.75rem">✓ Joined</div>`
+        : `<div class="uni-item-delete" onclick="joinUniverse('${u.uni_id}', '${u.uni_name}')" title="Join" style="color:#2de4c8">➕</div>`
+      }
+    </div>
+  `;
+}).join('');
 
   } catch (err) {
     list.innerHTML = '<div class="list-empty">Could not load universes</div>';
