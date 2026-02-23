@@ -769,7 +769,7 @@ def open_message(m_id):
                 # RETURN RESULTS with vote counts
                 cur.execute("""
                     SELECT po.option_id, po.option_text,
-                           COUNT(*) AS vote_count
+                           COUNT(pv.option_id) AS vote_count
                     FROM poll_options po
                     LEFT JOIN poll_votes pv ON po.option_id = pv.option_id
                     WHERE po.m_id = %s
@@ -1000,7 +1000,7 @@ def poll_results(m_id):
             SELECT
                 po.option_id,
                 po.option_text,
-                COUNT(*) AS vote_count
+                COUNT(pv.option_id) AS vote_count
             FROM poll_options po
             LEFT JOIN poll_votes pv ON po.option_id = pv.option_id
             WHERE po.m_id = %s
