@@ -375,9 +375,9 @@ def leave_universe():
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
 
-    uni_name = data.get("uni_name", "").strip()
-    if not uni_name:
-        return jsonify({"error": "uni_name required"}), 400
+    uni_id = data.get("uni_id")
+    if not uni_id:
+        return jsonify({"error": "uni_id required"}), 400
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -386,7 +386,7 @@ def leave_universe():
         cur.execute("""
             SELECT uni_id FROM universes
             WHERE uni_name = %s;
-        """, (uni_name,))
+        """, (uni_id,))
         universe = cur.fetchone()
 
         if not universe:
@@ -398,7 +398,7 @@ def leave_universe():
         """, (us_id, universe["uni_id"]))
 
         conn.commit()
-        return jsonify({"message": f"Left {uni_name}"}), 200
+        return jsonify({"message": f"Left {uni_id}"}), 200
 
     except Exception as e:
             conn.rollback()
