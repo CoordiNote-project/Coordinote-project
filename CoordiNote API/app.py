@@ -17,7 +17,7 @@ from flask_cors import CORS # CORS is needed for connection with frontend
 DB_CONFIG = {
     "database": "coordinote_db",
     "user": "postgres",
-    "password": "almakohl1007",
+    "password": "postgres",
     "host": "localhost",
     "port": "5432"
 }
@@ -317,7 +317,7 @@ def join_universe():
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
 
-    uni_id = data.get("uni_id", "").strip()
+    uni_id = data.get("uni_id")
     if not uni_id:
         return jsonify({"error": "uni_id required"}), 400
 
@@ -751,7 +751,7 @@ def open_message(m_id):
                 # RETURN RESULTS with vote counts
                 cur.execute("""
                     SELECT po.option_id, po.option_text,
-                           COUNT(pv.vote_id) AS vote_count
+                           COUNT(*) AS vote_count
                     FROM poll_options po
                     LEFT JOIN poll_votes pv ON po.option_id = pv.option_id
                     WHERE po.m_id = %s
@@ -982,7 +982,7 @@ def poll_results(m_id):
             SELECT
                 po.option_id,
                 po.option_text,
-                COUNT(pv.vote_id) AS vote_count
+                COUNT(*) AS vote_count
             FROM poll_options po
             LEFT JOIN poll_votes pv ON po.option_id = pv.option_id
             WHERE po.m_id = %s
