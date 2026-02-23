@@ -1065,7 +1065,7 @@ body {
   appearance: none;
 }
 
-/* Slider Track - der Teil LINKS vom Thumb wird orange! */
+/* Slider Track */
 .slider::-webkit-slider-runnable-track {
   height: 6px;
   background: var(--border);
@@ -1078,42 +1078,42 @@ body {
   border-radius: 10px;
 }
 
-/* Firefox: Orange Progress */
+/* Firefox: Lila Progress */
 .slider::-moz-range-progress {
   height: 6px;
-  background: linear-gradient(90deg, var(--amber), #e87b0e);
+  background: linear-gradient(90deg, #8700ff, #a855f7);
   border-radius: 10px;
 }
 
-/* Slider Thumb (der runde Knopf) */
+/* Slider Thumb (lila Knopf) */
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 18px;
   height: 18px;
-  background: var(--amber);
+  background: #8700ff;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(245,166,35,0.5);
-  margin-top: -6px; /* Zentriert den Thumb */
+  box-shadow: 0 2px 6px rgba(135,0,255,0.5);
+  margin-top: -6px;
 }
 
 .slider::-moz-range-thumb {
   width: 18px;
   height: 18px;
-  background: var(--amber);
+  background: #8700ff;
   border-radius: 50%;
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 6px rgba(245,166,35,0.5);
+  box-shadow: 0 2px 6px rgba(135,0,255,0.5);
 }
 
-/* Slider Hover Effect */
+/* Hover Effect */
 .slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
-  box-shadow: 0 4px 12px rgba(245,166,35,0.7);
+  box-shadow: 0 4px 12px rgba(135,0,255,0.7);
 }
 
 .slider::-moz-range-thumb:hover {
   transform: scale(1.15);
-  box-shadow: 0 4px 12px rgba(245,166,35,0.7);
+  box-shadow: 0 4px 12px rgba(135,0,255,0.7);
 }

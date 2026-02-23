@@ -275,7 +275,11 @@ function setupEventListeners() {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     });
+      const radiusSlider = document.getElementById('senderRadiusSlider');
+  if (radiusSlider) {
+    updateSenderRadius(radiusSlider.value);
   }
+}
 }
 
 // 
@@ -1006,7 +1010,14 @@ function setLocationMode(mode) {
 
 function updateSenderRadius(val) {
   document.getElementById('senderRadiusLabel').textContent = val + 'm';
-    if (senderSelectedLocation) {
+  
+  // Lila Füllung
+  const slider = document.getElementById('senderRadiusSlider');
+  const percent = ((val - 20) / (500 - 20)) * 100;
+  slider.style.background = `linear-gradient(to right, #8700ff 0%, #a855f7 ${percent}%, #252836 ${percent}%, #252836 100%)`;
+  
+  // Update radius circle on map
+  if (senderSelectedLocation) {
     if (window.radiusCircle) map.removeLayer(window.radiusCircle);
     window.radiusCircle = L.circle([senderSelectedLocation.lat, senderSelectedLocation.lng], {
       radius: parseInt(val),
