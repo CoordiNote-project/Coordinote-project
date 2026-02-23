@@ -1090,20 +1090,14 @@ async function submitMessageFromSidebar() {
   };
 
   // 2. creating marker
-  const marker = L.marker([newMsg.latitude, newMsg.longitude], {
+    const marker = L.marker([newMsg.latitude, newMsg.longitude], {
     icon: L.divIcon({
       html: `<div style="font-size:1.4rem">${typeIcon(currentSenderMsgType)}</div>`,
       className: '', iconSize: [30, 30], iconAnchor: [15, 15]
     })
-  }).addTo(map).bindPopup(`
-    <div style="font-family:'DM Sans',sans-serif">
-      <div style="font-size:0.9rem;font-weight:600;margin-bottom:6px">${content}</div>
-      <div style="font-size:0.7rem;color:#6b7280">by ${currentUser.username}</div>
-    </div>
-  `).openPopup();
+  }).addTo(map); 
 
-  marker.on('click', () => { marker.openPopup(); showMessageDetail(newMsg); });
-  messageMarkers.push(marker);
+  marker.on('click', () => { showMessageDetail(newMsg); });
 
   // 3. Buffer circle for unlock radius
   const circle = L.circle([newMsg.latitude, newMsg.longitude], {
