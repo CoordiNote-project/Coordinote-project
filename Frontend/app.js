@@ -214,7 +214,6 @@ if (app) app.classList.remove('hidden');
 console.log('✓ User logged in:', username);
 initMap();
 loadUniverses();
-loadMessages();
 loadPOIs();
 }
 // 
@@ -467,14 +466,7 @@ async function showMessageDetail(msg) {
   const locked = !isCreator && msg.distance > (msg.unl_rad || 50);
 
   // Only mark seen and update symbology if the message is actually reachable
-  if (!locked) {
-    seenMessages.add(msg.m_id);
-    msg.is_seen = true;
-    if (messageCircles[msg.m_id]) {
-      map.removeLayer(messageCircles[msg.m_id]);
-      delete messageCircles[msg.m_id];
-    }
-    updateMarkerAppearance(msg.m_id);
+    if (!locked) {
     window.lastOpenedMsg = msg;
   }
 
@@ -496,13 +488,14 @@ async function showMessageDetail(msg) {
         return;
       }
 
+     // API confirmed save to DB — now safe to update local state
       seenMessages.add(msg.m_id);
-      updateMarkerAppearance(msg.m_id);
-
+      msg.is_seen = true;
       if (messageCircles[msg.m_id]) {
         map.removeLayer(messageCircles[msg.m_id]);
         delete messageCircles[msg.m_id];
       }
+      updateMarkerAppearance(msg.m_id);
 
 
       // Text showing
@@ -640,18 +633,43 @@ async function deleteMessage(msgId) {
       if (!res.ok) throw new Error('API error');
     }
   } catch (err) {
-    console.warn('API not available, deleting locally');
+    showToast('Could not delete message', 'error');
+    return;
   }
 
+  // Remove circle
   if (messageCircles[msgId]) {
     map.removeLayer(messageCircles[msgId]);
     delete messageCircles[msgId];
   }
 
+  // Remove marker directly by index (no full re-render)
+  const idx = allMessages.findIndex(m => m.m_id === msgId);
+  if (idx !== -1 && messageMarkers[idx]) {
+    map.removeLayer(messageMarkers[idx]);
+    messageMarkers.splice(idx, 1);
+  }
+
   allMessages = allMessages.filter(m => m.m_id !== msgId);
-  renderMessageMarkers(allMessages);
-  closeSidePanel();
+  window.lastOpenedMsg = null; // prevent closeSidePanel from double-deleting
+
+  const panel = document.getElementById('sidePanel');
+  if (panel) panel.classList.remove('active');
+
   showToast('Message deleted 🚪', 'success');
+}
+
+function clearLocationSelection() {
+  if (window.tempMarker) {
+    map.removeLayer(window.tempMarker);
+    window.tempMarker = null;
+  }
+  if (window.radiusCircle) {
+    map.removeLayer(window.radiusCircle);
+    window.radiusCircle = null;
+  }
+  senderSelectedLocation = null;
+  updateLocationDisplay(null);
 }
 
 function filterMessagesByUniverse(uniId) {
@@ -1164,15 +1182,26 @@ function updateLocationDisplay(location) {
   const display = document.getElementById('senderLocationDisplay');
   const icon = display.querySelector('.location-icon');
   const text = display.querySelector('.location-text');
-  
+
   if (location) {
     display.classList.add('selected');
     icon.textContent = '✓';
     text.textContent = `${location.lat.toFixed(4)}°N, ${Math.abs(location.lng).toFixed(4)}°W`;
+    // Add clear button if not already there
+    if (!display.querySelector('.clear-loc-btn')) {
+      const btn = document.createElement('button');
+      btn.className = 'clear-loc-btn';
+      btn.textContent = '✕';
+      btn.style.cssText = 'background:none;border:none;color:#6b7280;cursor:pointer;font-size:1rem;padding:0 4px;margin-left:auto';
+      btn.onclick = clearLocationSelection;
+      display.appendChild(btn);
+    }
   } else {
     display.classList.remove('selected');
     icon.textContent = '🖱️';
     text.textContent = 'Click on map to set location';
+    const btn = display.querySelector('.clear-loc-btn');
+    if (btn) btn.remove();
   }
 }
 
@@ -1333,7 +1362,6 @@ function renderUniverseListInReceiver() {
       <div class="uni-item-icon">${getUniverseIcon(u.uni_name)}</div>
       <div class="uni-item-text">
         <div class="uni-item-name">${u.uni_name}</div>
-        <div class="uni-item-count">${u.descri || ''}</div>
       </div>
       <div class="uni-item-delete" onclick="leaveUniverse(${u.uni_id}, event)" title="Delete">
         🚪
