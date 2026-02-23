@@ -444,6 +444,33 @@ const marker = L.marker([msg.latitude, msg.longitude], {
 }
 
 async function showMessageDetail(msg) {
+  // Fetch full content from API
+  try {
+    const res = await fetch(`${API}/messages/${msg.m_id}/open`, {
+      method: 'POST',
+      headers: { 'Authorization': currentUser.token }
+    });
+    const data = await res.json();
+    if (data.poll_options) msg.poll_options = data.poll_options;
+    if (data.m_txt) msg.m_txt = data.m_txt;
+  } catch (err) {
+    console.warn('Could not open message via API');
+  }
+
+  seenMessages.add(msg.m_id);
+  if (msg.view_once) {
+    const idx = allMessages.findIndex(m => m.m_id === msg.m_id);
+    if (idx !== -1 && messageMarkers[idx]) {
+      map.removeLayer(messageMarkers[idx]);
+      messageMarkers.splice(idx, 1);
+      allMessages.splice(idx, 1);
+    }
+    if (messageCircles[msg.m_id]) {
+      map.removeLayer(messageCircles[msg.m_id]);
+      delete messageCircles[msg.m_id];
+    }
+  }
+
   const panel = document.getElementById('sidePanel');
   const panelBadge = document.getElementById('panelBadge');
   const panelBody = document.getElementById('panelBody');
@@ -545,6 +572,35 @@ async function showMessageDetail(msg) {
 
   panelBody.innerHTML = body;
   panel.classList.add('active');
+}
+
+async function votePoll(optionId) {
+  try {
+    const res = await fetch(`${API}/poll/vote`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': currentUser.token 
+      },
+      body: JSON.stringify({ option_id: optionId })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.error || 'Could not vote', 'error');
+      return;
+    }
+
+    showToast('Vote recorded! 🗳️', 'success');
+
+    // Reload the side panel to show results
+    const msg = allMessages.find(m => m.poll_options?.some(o => o.option_id == optionId));
+    if (msg) showMessageDetail(msg);
+
+  } catch (err) {
+    showToast('Server not reachable', 'error');
+  }
 }
 
 function updateMarkerAppearance(msgId) {
