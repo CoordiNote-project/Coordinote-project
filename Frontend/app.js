@@ -8,7 +8,7 @@ const API = 'http://localhost:5000';
 const LISBON = [38.7169, -9.1393];
 const USE_API = false; 
 
-// ── Global Variables ──
+// defining Global Variables
 let map;
 let currentUser = null;
 let allMessages = [];
