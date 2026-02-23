@@ -1330,14 +1330,30 @@ function closeDiscoverModal() {
   document.getElementById('discoverModal').classList.add('hidden');
 }
 
-function joinUniverse(uniId) {
-  hiddenUniverses = hiddenUniverses.filter(id => id !== uniId);
-  renderUniverseListInReceiver();
-  fillUniverseDropdowns();
+async function joinUniverse(uniId, uniName) {
+  // API call
+  if (USE_API) {
+    try {
+      const res = await fetch(`${API}/universes/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': currentUser.token },
+        body: JSON.stringify({ uni_name: uniName })
+      });
+      if (!res.ok) {
+        showToast('Could not join universe', 'error');
+        return;
+      }
+    } catch (err) {
+      showToast('Server not reachable', 'error');
+      return;
+    }
+  }
+
+  // Reload universes from API so the new one appears
+  await loadUniverses();
   closeDiscoverModal();
   showToast('Universe joined! 🌍', 'success');
 }
-
 function openFundModal() {
   document.getElementById('fundModal').classList.remove('hidden');
 }
