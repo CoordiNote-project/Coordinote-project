@@ -436,7 +436,6 @@ const marker = L.marker([msg.latitude, msg.longitude], {
     `);
 
     marker.on('click', () => {
-      marker.openPopup();
       showMessageDetail(msg);
     });
 
@@ -444,22 +443,7 @@ const marker = L.marker([msg.latitude, msg.longitude], {
   });
 }
 
-function showMessageDetail(msg) {
-   seenMessages.add(msg.m_id);
-   if (msg.view_once) {
-  const idx = allMessages.findIndex(m => m.m_id === msg.m_id);
-  if (idx !== -1 && messageMarkers[idx]) {
-    map.removeLayer(messageMarkers[idx]);
-    messageMarkers.splice(idx, 1);
-    allMessages.splice(idx, 1);
-  }
-  if (messageCircles[msg.m_id]) {
-    map.removeLayer(messageCircles[msg.m_id]);
-    delete messageCircles[msg.m_id];
-  }
-}
-
-  updateMarkerAppearance(msg.m_id);
+async function showMessageDetail(msg) {
   const panel = document.getElementById('sidePanel');
   const panelBadge = document.getElementById('panelBadge');
   const panelBody = document.getElementById('panelBody');
@@ -478,7 +462,7 @@ function showMessageDetail(msg) {
     </div>
   `;
 
-   if (msg.creator_name === currentUser?.username) {
+  if (msg.creator_name === currentUser?.username) {
     body += `
       <button onclick="deleteMessage(${msg.m_id})" 
               style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);
@@ -490,30 +474,61 @@ function showMessageDetail(msg) {
   }
 
   if (msg.distance !== undefined) {
-    const locked = msg.distance > (msg.unl_rad || 50);
+    const isCreator = msg.creator_name === currentUser?.username;
+    const locked = !isCreator && msg.distance > (msg.unl_rad || 50);
 
-    if (!locked && msg.m_txt) {
-      body += `
-        <div style="background:#13151e;border-radius:10px;padding:14px;margin-bottom:14px;
-                    font-size:0.9rem;line-height:1.6">
-          ${msg.m_txt}
-        </div>
-      `;
+    if (!locked) {
+      const res = await fetch(`${API}/messages/${msg.m_id}/open`, {
+        method: 'POST',
+        headers: { 'Authorization': currentUser.token }
+      });
+      const data = await res.json();
+
+      if (data.status === 'already viewed') {
+        showToast('Already seen! 🫣', 'error');
+        return;
+      }
+
+      seenMessages.add(msg.m_id);
+      updateMarkerAppearance(msg.m_id);
+
+      if (messageCircles[msg.m_id]) {
+        map.removeLayer(messageCircles[msg.m_id]);
+        delete messageCircles[msg.m_id];
+      }
+
+      if (msg.view_once) {
+        const idx = allMessages.findIndex(m => m.m_id === msg.m_id);
+        if (idx !== -1 && messageMarkers[idx]) {
+          map.removeLayer(messageMarkers[idx]);
+          messageMarkers.splice(idx, 1);
+          allMessages.splice(idx, 1);
+        }
+      }
+
+      if (msg.m_txt) {
+        body += `
+          <div style="background:#13151e;border-radius:10px;padding:14px;margin-bottom:14px;
+                      font-size:0.9rem;line-height:1.6">
+            ${msg.m_txt}
+          </div>
+        `;
+      }
+
+      if (msg.m_type === 'poll' && msg.poll_options) {
+        body += `<div style="font-weight:600;margin-bottom:10px">${msg.m_txt}</div>`;
+        body += `<div style="display:flex;flex-direction:column;gap:8px">`;
+        msg.poll_options.forEach(opt => {
+          body += `
+            <button onclick="votePoll(${opt.option_id})"
+                    style="background:#1e2030;border:1px solid #2d3048;
+                           border-radius:8px;padding:10px;color:white;cursor:pointer">
+              ${opt.option_text}
+            </button>`;
+        });
+        body += `</div>`;
+      }
     }
-
-   if (!locked && msg.m_type === 'poll' && msg.poll_options) {
-  body += `<div style="font-weight:600;margin-bottom:10px">${msg.m_txt}</div>`;
-  body += `<div style="display:flex;flex-direction:column;gap:8px">`;
-  msg.poll_options.forEach(opt => {
-    body += `
-      <button onclick="votePoll(${opt.option_id})"
-              style="background:#1e2030;border:1px solid #2d3048;
-                     border-radius:8px;padding:10px;color:white;cursor:pointer">
-        ${opt.option_text}
-      </button>`;
-  });
-  body += `</div>`;
-}
 
     body += `
       <div style="background:${locked ? 'rgba(255,77,109,0.1)' : 'rgba(45,228,200,0.1)'};
@@ -854,16 +869,33 @@ async function searchUniverses(query) {
   }
 }
 // Delete universe
-function deleteUniverse(uniId, event) {
-  event.stopPropagation(); // Don't trigger click on parent
+async function leaveUniverse(uniId, event) {
+  event.stopPropagation();
 
-    // Remove from list
-    hiddenUniverses.push(uniId);
+  if (USE_API) {
+    try {
+      const res = await fetch(`${API}/universes/leave`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': currentUser.token 
+        },
+        body: JSON.stringify({ uni_id: uniId })
+      });
+      if (!res.ok) {
+        showToast('Could not leave universe', 'error');
+        return;
+      }
+    } catch (err) {
+      showToast('Server not reachable', 'error');
+      return;
+    }
+  }
 
-     renderUniverseListInReceiver();
+  hiddenUniverses.push(uniId);
+  renderUniverseListInReceiver();
   fillUniverseDropdowns();
-
-  showToast('Universe left 👋', 'success'); 
+  showToast('Universe left 👋', 'success');
 }
 
 // Rejoin universe
