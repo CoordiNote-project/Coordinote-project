@@ -228,7 +228,7 @@ def public_universes():
 
     try:
         cur.execute("""
-            SELECT uni_id, uni_name, descri
+            SELECT uni_name, descri
             FROM universes
             WHERE access = false;
         """)
@@ -317,9 +317,9 @@ def join_universe():
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
 
-    uni_id = data.get("uni_id", "").strip()
-    if not uni_id:
-        return jsonify({"error": "uni_id required"}), 400
+    uni_name = data.get("uni_name", "").strip()
+    if not uni_name:
+        return jsonify({"error": "uni_name required"}), 400
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -328,8 +328,8 @@ def join_universe():
         # does the universe exist? resolve uni_name to uni_id
         cur.execute("""
             SELECT uni_id FROM universes
-            WHERE LOWER(uni_id) = LOWER(%s);
-        """, (uni_id,))
+            WHERE LOWER(uni_name) = LOWER(%s);
+        """, (uni_name,))
         universe = cur.fetchone()
 
         if not universe:
@@ -343,7 +343,7 @@ def join_universe():
         """, (us_id, universe["uni_id"]))
        
         conn.commit()
-        return jsonify({"message": f"Joined {uni_id}"}), 200
+        return jsonify({"message": f"Joined {uni_name}"}), 200
 
     except Exception as e:
         conn.rollback()
@@ -413,15 +413,14 @@ def get_locations():
                        ST_Y(geom) AS latitude,
                        ST_X(geom) AS longitude
                 FROM locations
-                WHERE category = %s AND l_name IS NOT NULL;
+                WHERE category = %s;
             """, (category_filter,))
         else:
             cur.execute("""
                 SELECT location_id, l_name, category,
                        ST_Y(geom) AS latitude,
                        ST_X(geom) AS longitude
-                FROM locations
-                WHERE l_name IS NOT NULL;
+                FROM locations;
             """)
 
         locations = cur.fetchall()

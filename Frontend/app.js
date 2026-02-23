@@ -6,7 +6,7 @@
 // ── Configuration ──
 const API = 'http://localhost:5000';
 const LISBON = [38.7169, -9.1393];
-const USE_API = false; 
+const USE_API = true; 
 
 // defining Global Variables
 let map;
@@ -446,12 +446,12 @@ function showMessageDetail(msg) {
     messageMarkers.splice(idx, 1);
     allMessages.splice(idx, 1);
   }
-}
   if (messageCircles[msg.m_id]) {
     map.removeLayer(messageCircles[msg.m_id]);
     delete messageCircles[msg.m_id];
   }
 }
+
   updateMarkerAppearance(msg.m_id);
   const panel = document.getElementById('sidePanel');
   const panelBadge = document.getElementById('panelBadge');
@@ -523,6 +523,7 @@ function showMessageDetail(msg) {
 
   panelBody.innerHTML = body;
   panel.classList.add('active');
+}
 
 function updateMarkerAppearance(msgId) {
   const idx = allMessages.findIndex(m => m.m_id === msgId);
