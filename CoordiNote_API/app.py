@@ -22,7 +22,6 @@ DB_CONFIG = {
     "port": "5432"
 }
 
-
 # Create connection pool
 db_pool = SimpleConnectionPool(
     minconn=1,
@@ -995,7 +994,7 @@ def poll_results(m_id):
         if not cur.fetchone():
             return jsonify({"error": "Vote first to see results"}), 403
 
-        # Results with vote counts (LEFT JOIN keeps options with 0 votes)
+        # Results with vote counts - counting the % of votes per option
         cur.execute("""
             SELECT
                 po.option_id,
