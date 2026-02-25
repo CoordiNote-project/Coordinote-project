@@ -42,7 +42,9 @@ CORS(app)
 def get_db_connection():
     return db_pool.getconn()
 
-# To release a db connection back to the pool after it's been used. It takes a connection object as an argument and calls the putconn method of the connection pool to return the connection to the pool for reuse.
+# To release a db connection back to the pool after it's been used.
+# It takes a connection object as an argument and calls the putconn method of the connection pool
+# to return the connection to the pool for reuse.
 def release_db_connection(conn):
     db_pool.putconn(conn)
 
@@ -77,12 +79,12 @@ def get_current_user():
     finally:
         release_db_connection(conn)
 
-# Test route
+# TEST route to check if the API is running
 @app.route("/")
 def home():
     return jsonify({"message": "Coordinote API is running!"})
 
-# Test database connection route
+# TEST database connection route
 @app.route("/test-db")
 def test_db():
     conn = get_db_connection()
@@ -92,7 +94,10 @@ def test_db():
     release_db_connection(conn)
     return jsonify(result)
 
-# Protected test route
+# Protected TEST route --> to check if token authentication works,
+# returns the user ID associated with the provided token if valid,
+# or an error message if the token is missing, invalid, or expired.
+# !!! IN THE END, WE ENEDED UP NOT USING THE TOKEN - lack of time, instead we used us_id
 @app.route("/protected-test")
 def protected_test():
     us_id, error = get_current_user()
@@ -142,7 +147,7 @@ def register_user():
         return jsonify({
         "message": "User created successfully",
         "us_id": us_id
-        }), 201 # 201 Created status code indicates that the request has succeeded and a new resource has been created as a result. It's the appropriate response for successful POST requests that create new resources.
+        }), 201 # Created status code = that the request has succeeded and a new resource has been created as a result. It's the appropriate response for successful POST requests that create new resources.
 
     except psycopg2.errors.UniqueViolation:
         conn.rollback()
@@ -174,9 +179,11 @@ def login_user():
     conn = get_db_connection()
     cur = conn.cursor()
 
-# Query the database for a user with the provided username, ignoring case sensitivity. If a user is found, it retrieves the user's ID and hashed password. If no user is found, it returns a 404 error.
-# If a user is found, it uses bcrypt to verify the provided password against the stored hashed password. If the verification is successful, it generates a unique token for the session, sets an expiration time of 72 hours, and stores this information in the sessions table.
-# Finally, it returns a success message along with the generated token. If any errors occur during this process, appropriate error messages are returned with corresponding HTTP status codes.
+# Query the database for a user with the provided username, ignoring case sensitivity.
+# If a user is found --> it retrieves the user's ID and hashed password. If not found --> 404 error.
+# If found --> uses bcrypt to verify the provided password against the stored hashed password.
+# If the verification is successful, it generates a unique token for the session, sets an expiration time of 72 hours, and stores this information in the sessions table.
+# Finally, it returns a success message along with the generated token.
     cur.execute("""
     SELECT us_id, us_name, pwd
         FROM users 
@@ -188,7 +195,8 @@ def login_user():
     if not user:
         return jsonify({"error": "User not found"}), 404
     
-    # Verify the provided password against the hashed password stored in the database using bcrypt's verify function. If the verification is successful, it means the provided password is correct.
+    # Verify the provided password against the hashed password stored in the database using bcrypt's verify function.
+    # If the verification is successful, it means the provided password is correct.
     if bcrypt.verify(password, user["pwd"]):
         token = str(uuid.uuid4()) # Generate token
         expires_at = datetime.utcnow() + timedelta(hours=72) # Set expiration (72 hours)
@@ -234,7 +242,7 @@ def search_universes():
                 SELECT uni_id, uni_name, access, descri
                 FROM universes
                 WHERE LOWER(uni_name) LIKE LOWER(%s);
-            """, (f"%{query}%",))
+            """, (f"%{query}%",)) # The % --> the query will match/find any universe name that contains the search term, regardless of case. For example, if the search term is "geo", it will match universe names like "Geospatial Technologies", "Geologists".
         else:
             cur.execute("""
                 SELECT uni_id, uni_name, access, descri
@@ -261,7 +269,7 @@ def universes():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    try:# Create universe
+    try: # Create universe
         if request.method == "POST":
             data = request.get_json(silent=True)
             if not data:
@@ -455,7 +463,7 @@ def get_locations():
     finally:
         release_db_connection(conn)
 
-# MESSAGES: POST + GET rout
+# MESSAGES: POST + GET route
 # POST /messages
 # Handles both "text" and "poll" m_types.
 @app.route("/messages", methods=["GET", "POST"])
